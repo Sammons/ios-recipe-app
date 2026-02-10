@@ -1,0 +1,4 @@
+version: 1
+bundleID: io.sammons.recipe-app
+displayName: Recipe App
+deploymentTarget: 17.0
