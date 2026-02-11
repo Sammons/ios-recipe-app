@@ -23,7 +23,6 @@ jobs:
         run: swift build
 
       - name: Build for iOS (xcodebuild)
-        continue-on-error: true
         run: |
           xcodebuild \
             -scheme RecipeApp \
