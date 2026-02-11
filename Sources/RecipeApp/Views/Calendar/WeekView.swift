@@ -98,7 +98,7 @@ struct WeekDayRow: View {
                     .font(.subheadline)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
-                    .background(.accent.opacity(0.15))
+                    .background(Color.accentColor.opacity(0.15))
                     .clipShape(Capsule())
             } else {
                 Text("No meals planned")

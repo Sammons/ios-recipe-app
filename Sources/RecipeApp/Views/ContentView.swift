@@ -28,26 +28,33 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ForEach(AppTab.allCases, id: \.self) { tab in
-                Tab(tab.rawValue, systemImage: tab.icon, value: tab) {
-                    switch tab {
-                    case .calendar:
-                        CalendarView()
-                    case .recipeBuilder:
-                        RecipeBuilderView()
-                    case .shoppingList:
-                        ShoppingListView()
-                    case .inventory:
-                        InventoryView()
-                    case .recipeBook:
-                        RecipeBookView()
-                    case .preferences:
-                        PreferencesView()
-                    case .help:
-                        HelpView()
-                    }
-                }
-            }
+            CalendarView()
+                .tag(AppTab.calendar)
+                .tabItem { Label(AppTab.calendar.rawValue, systemImage: AppTab.calendar.icon) }
+
+            RecipeBuilderView()
+                .tag(AppTab.recipeBuilder)
+                .tabItem { Label(AppTab.recipeBuilder.rawValue, systemImage: AppTab.recipeBuilder.icon) }
+
+            ShoppingListView()
+                .tag(AppTab.shoppingList)
+                .tabItem { Label(AppTab.shoppingList.rawValue, systemImage: AppTab.shoppingList.icon) }
+
+            InventoryView()
+                .tag(AppTab.inventory)
+                .tabItem { Label(AppTab.inventory.rawValue, systemImage: AppTab.inventory.icon) }
+
+            RecipeBookView()
+                .tag(AppTab.recipeBook)
+                .tabItem { Label(AppTab.recipeBook.rawValue, systemImage: AppTab.recipeBook.icon) }
+
+            PreferencesView()
+                .tag(AppTab.preferences)
+                .tabItem { Label(AppTab.preferences.rawValue, systemImage: AppTab.preferences.icon) }
+
+            HelpView()
+                .tag(AppTab.help)
+                .tabItem { Label(AppTab.help.rawValue, systemImage: AppTab.help.icon) }
         }
     }
 }
