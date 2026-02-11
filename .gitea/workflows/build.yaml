@@ -22,9 +22,6 @@ jobs:
       - name: Build package
         run: swift build
 
-      - name: Run xcodebuild first launch
-        run: xcodebuild -runFirstLaunch || true
-
       - name: Build for iOS (xcodebuild)
         continue-on-error: true
         run: |
