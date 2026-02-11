@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  REQUIRED_PLATFORMS: iOS
+
 jobs:
   build:
     runs-on: macos-arm64
@@ -16,6 +19,17 @@ jobs:
       - name: Swift version
         run: swift --version
 
+      - name: Ensure simulator runtimes
+        run: |
+          for platform in $REQUIRED_PLATFORMS; do
+            if xcrun simctl list runtimes | grep -q "$platform"; then
+              echo "$platform runtime already installed"
+            else
+              echo "$platform runtime missing — downloading..."
+              xcodebuild -downloadPlatform "$platform"
+            fi
+          done
+
       - name: Resolve dependencies
         run: swift package resolve
 
@@ -23,7 +37,6 @@ jobs:
         run: swift build
 
       - name: Build for iOS (xcodebuild)
-        continue-on-error: true
         run: |
           xcodebuild \
             -scheme RecipeApp \
