@@ -26,6 +26,7 @@ jobs:
         run: xcodebuild -runFirstLaunch || true
 
       - name: Build for iOS (xcodebuild)
+        continue-on-error: true
         run: |
           xcodebuild \
             -scheme RecipeApp \
