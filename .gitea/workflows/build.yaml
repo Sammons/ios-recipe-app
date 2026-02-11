@@ -21,12 +21,20 @@ jobs:
 
       - name: Ensure simulator runtimes
         run: |
+          echo "=== Installed SDKs ==="
+          xcodebuild -showsdks 2>/dev/null || true
+          echo ""
+          echo "=== Simulator Runtimes ==="
+          xcrun simctl list runtimes 2>/dev/null || true
+          echo ""
           for platform in $REQUIRED_PLATFORMS; do
-            if xcrun simctl list runtimes | grep -q "$platform"; then
-              echo "$platform runtime already installed"
+            sdk_name=$(echo "$platform" | tr '[:upper:]' '[:lower:]')simulator
+            if xcodebuild -showsdks 2>/dev/null | grep -q "$sdk_name"; then
+              echo "$platform SDK available — skipping download"
             else
-              echo "$platform runtime missing — downloading..."
+              echo "$platform SDK not found — downloading..."
               xcodebuild -downloadPlatform "$platform"
+              echo "$platform download complete"
             fi
           done
 
