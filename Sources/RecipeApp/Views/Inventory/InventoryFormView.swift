@@ -31,13 +31,17 @@ struct InventoryFormView: View {
                 Section("Amount") {
                     HStack {
                         TextField("Quantity", value: $quantity, format: .number)
+                            #if os(iOS)
                             .keyboardType(.decimalPad)
+                            #endif
                         TextField("Unit (g, oz, cups...)", text: $unit)
                     }
                 }
             }
             .navigationTitle(isEditing ? "Edit Item" : "Add Item")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

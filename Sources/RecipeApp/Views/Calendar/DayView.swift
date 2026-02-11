@@ -64,7 +64,7 @@ struct DayView: View {
                 if DateHelpers.isToday(selectedDate) {
                     Text("Today")
                         .font(.caption)
-                        .foregroundStyle(.accent)
+                        .foregroundStyle(Color.accentColor)
                 }
             }
 

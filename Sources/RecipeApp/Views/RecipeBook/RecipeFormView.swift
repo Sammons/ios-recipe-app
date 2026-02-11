@@ -77,7 +77,9 @@ struct RecipeFormView: View {
                 }
             }
             .navigationTitle(isEditing ? "Edit Recipe" : "New Recipe")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -197,7 +199,9 @@ struct IngredientRowEditor: View {
             }
             HStack {
                 TextField("Qty", value: $row.quantity, format: .number)
+                    #if os(iOS)
                     .keyboardType(.decimalPad)
+                    #endif
                     .frame(width: 60)
                 TextField("Unit", text: $row.unit)
                     .frame(width: 60)

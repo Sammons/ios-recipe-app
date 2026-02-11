@@ -19,7 +19,9 @@ struct RecipeDetailView: View {
             }
         }
         .navigationTitle(recipe?.title ?? "Recipe")
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
+        #endif
         .toolbar {
             if recipe != nil {
                 Button("Edit", systemImage: "pencil") {
@@ -75,7 +77,7 @@ struct RecipeDetailView: View {
                         HStack(alignment: .top, spacing: 12) {
                             Text("\(index + 1)")
                                 .font(.headline)
-                                .foregroundStyle(.accent)
+                                .foregroundStyle(Color.accentColor)
                                 .frame(width: 28)
                             Text(step)
                         }

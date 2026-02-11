@@ -94,7 +94,7 @@ struct GettingStartedView: View {
             Text("\(number)")
                 .font(.title)
                 .fontWeight(.bold)
-                .foregroundStyle(.accent)
+                .foregroundStyle(Color.accentColor)
                 .frame(width: 40)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -150,7 +150,7 @@ struct AboutView: View {
 
             Image(systemName: "fork.knife.circle.fill")
                 .font(.system(size: 80))
-                .foregroundStyle(.accent)
+                .foregroundStyle(Color.accentColor)
 
             Text("Recipe App")
                 .font(.title)

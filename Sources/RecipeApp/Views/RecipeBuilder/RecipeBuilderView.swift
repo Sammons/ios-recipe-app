@@ -20,7 +20,9 @@ struct RecipeBuilderView: View {
                 }
             }
             .navigationTitle("Recipe Builder")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
         }
     }
 
@@ -269,7 +271,7 @@ struct ChatBubble: View {
             if message.isUser { Spacer() }
             Text(message.text)
                 .padding(10)
-                .background(message.isUser ? Color.accentColor : Color(.secondarySystemBackground))
+                .background(message.isUser ? Color.accentColor : Color.gray.opacity(0.15))
                 .foregroundStyle(message.isUser ? .white : .primary)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             if !message.isUser { Spacer() }

@@ -48,7 +48,9 @@ struct MealCompletionSheet: View {
                 }
             }
             .navigationTitle("Meal Check-in")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 Button("Done") { dismiss() }
             }

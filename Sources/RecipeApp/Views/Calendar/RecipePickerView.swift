@@ -26,7 +26,9 @@ struct RecipePickerView: View {
                 .buttonStyle(.plain)
             }
             .navigationTitle("Choose Recipe")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .searchable(text: $searchText, prompt: "Search recipes")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
