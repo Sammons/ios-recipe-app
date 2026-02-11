@@ -7,16 +7,9 @@ struct RecipeApp: App {
     private static let inMemory = ProcessInfo.processInfo.arguments.contains("UITEST_INMEMORY")
     static let shouldSeed = ProcessInfo.processInfo.arguments.contains("UITEST_SEED")
 
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var showMealCompletion = false
-    @State private var overdueEntries: [MealPlanEntry] = []
-
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .sheet(isPresented: $showMealCompletion) {
-                    MealCompletionSheet(overdueEntries: overdueEntries)
-                }
+            RootView()
         }
         .modelContainer(
             for: [
@@ -30,25 +23,28 @@ struct RecipeApp: App {
             ],
             inMemory: Self.inMemory
         )
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active && !RecipeApp.isUITest {
-                checkOverdueMeals()
-            }
-        }
     }
+}
 
-    @MainActor
-    private func checkOverdueMeals() {
-        guard
-            let container = try? ModelContainer(for: Recipe.self, Ingredient.self,
-                RecipeIngredient.self, MealPlanEntry.self, InventoryItem.self,
-                ShoppingListItem.self, UserPreferences.self)
-        else { return }
-        let context = container.mainContext
-        let entries = MealCompletionService.overdueEntries(context: context)
-        if !entries.isEmpty {
-            overdueEntries = entries
-            showMealCompletion = true
-        }
+private struct RootView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
+    @State private var showMealCompletion = false
+    @State private var overdueEntries: [MealPlanEntry] = []
+
+    var body: some View {
+        ContentView()
+            .sheet(isPresented: $showMealCompletion) {
+                MealCompletionSheet(overdueEntries: overdueEntries)
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active && !RecipeApp.isUITest {
+                    let entries = MealCompletionService.overdueEntries(context: modelContext)
+                    if !entries.isEmpty {
+                        overdueEntries = entries
+                        showMealCompletion = true
+                    }
+                }
+            }
     }
 }

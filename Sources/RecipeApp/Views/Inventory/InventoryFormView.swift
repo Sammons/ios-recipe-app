@@ -72,6 +72,10 @@ struct InventoryFormView: View {
             item.quantity = quantity
             item.unit = unit
             item.lastUpdated = Date()
+        } else if let existing = ingredient.inventoryItem {
+            existing.quantity = quantity
+            existing.unit = unit
+            existing.lastUpdated = Date()
         } else {
             let item = InventoryItem(
                 quantity: quantity,
