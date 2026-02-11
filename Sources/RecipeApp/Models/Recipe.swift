@@ -1,29 +1,59 @@
 import Foundation
+import SwiftData
 
-struct Recipe: Identifiable, Codable, Sendable {
-    let id: UUID
+@Model
+final class Recipe {
     var title: String
-    var description: String
-    var ingredients: [String]
+    var summary: String
+    var prepTimeMinutes: Int
+    var cookTimeMinutes: Int
+    var servings: Int
+    var recipeType: String
     var instructions: [String]
-    var prepTime: TimeInterval
-    var cookTime: TimeInterval
+    var createdAt: Date
+    var updatedAt: Date
+
+    @Relationship(deleteRule: .cascade, inverse: \RecipeIngredient.recipe)
+    var recipeIngredients: [RecipeIngredient]
+
+    @Relationship(deleteRule: .nullify, inverse: \MealPlanEntry.recipe)
+    var mealPlanEntries: [MealPlanEntry]
 
     init(
-        id: UUID = UUID(),
         title: String,
-        description: String = "",
-        ingredients: [String] = [],
+        summary: String = "",
+        prepTimeMinutes: Int = 0,
+        cookTimeMinutes: Int = 0,
+        servings: Int = 1,
+        recipeType: String = RecipeType.dinner,
         instructions: [String] = [],
-        prepTime: TimeInterval = 0,
-        cookTime: TimeInterval = 0
+        recipeIngredients: [RecipeIngredient] = [],
+        mealPlanEntries: [MealPlanEntry] = []
     ) {
-        self.id = id
         self.title = title
-        self.description = description
-        self.ingredients = ingredients
+        self.summary = summary
+        self.prepTimeMinutes = prepTimeMinutes
+        self.cookTimeMinutes = cookTimeMinutes
+        self.servings = servings
+        self.recipeType = recipeType
         self.instructions = instructions
-        self.prepTime = prepTime
-        self.cookTime = cookTime
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.recipeIngredients = recipeIngredients
+        self.mealPlanEntries = mealPlanEntries
     }
+
+    var totalTimeMinutes: Int {
+        prepTimeMinutes + cookTimeMinutes
+    }
+}
+
+enum RecipeType {
+    static let breakfast = "Breakfast"
+    static let lunch = "Lunch"
+    static let dinner = "Dinner"
+    static let snack = "Snack"
+    static let dessert = "Dessert"
+
+    static let allTypes = [breakfast, lunch, dinner, snack, dessert]
 }
