@@ -28,15 +28,24 @@ struct InventoryView: View {
         NavigationStack {
             List {
                 if filteredItems.isEmpty {
-                    ContentUnavailableView(
-                        searchText.isEmpty ? "No Inventory" : "No Results",
-                        systemImage: searchText.isEmpty ? "refrigerator" : "magnifyingglass",
-                        description: Text(
-                            searchText.isEmpty
-                                ? "Track what ingredients you have on hand."
-                                : "No items match your search."
+                    if searchText.isEmpty {
+                        ContentUnavailableView(
+                            "No Inventory",
+                            systemImage: "refrigerator",
+                            description: Text("Track what ingredients you have on hand.")
+                        ) {
+                            Button("Add First Ingredient", systemImage: "plus") {
+                                showingAddItem = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    } else {
+                        ContentUnavailableView(
+                            "No Results",
+                            systemImage: "magnifyingglass",
+                            description: Text("No items match your search.")
                         )
-                    )
+                    }
                 } else {
                     ForEach(groupedItems, id: \.0) { category, items in
                         Section(category) {
@@ -60,8 +69,10 @@ struct InventoryView: View {
             .navigationTitle("Inventory")
             .searchable(text: $searchText, prompt: "Search inventory")
             .toolbar {
-                Button("Add Item", systemImage: "plus") {
-                    showingAddItem = true
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Add Item", systemImage: "plus") {
+                        showingAddItem = true
+                    }
                 }
             }
             .sheet(isPresented: $showingAddItem) {

@@ -33,13 +33,18 @@ struct DayView: View {
                             Button {
                                 showingRecipePicker = slot
                             } label: {
-                                Label("Tap to add", systemImage: "plus.circle.dashed")
-                                    .foregroundStyle(.secondary)
+                                Label("Add \(slot)", systemImage: "plus.circle.fill")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(.accent)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 10)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
             }
+            .listStyle(.insetGrouped)
         }
         .sheet(item: $showingRecipePicker) { slot in
             RecipePickerView { recipe in
@@ -54,6 +59,9 @@ struct DayView: View {
                 selectedDate = DateHelpers.addDays(-1, to: selectedDate)
             } label: {
                 Image(systemName: "chevron.left")
+                    .font(.headline)
+                    .frame(width: 36, height: 36)
+                    .background(.ultraThinMaterial, in: Circle())
             }
 
             Spacer()
@@ -74,6 +82,9 @@ struct DayView: View {
                 selectedDate = DateHelpers.addDays(1, to: selectedDate)
             } label: {
                 Image(systemName: "chevron.right")
+                    .font(.headline)
+                    .frame(width: 36, height: 36)
+                    .background(.ultraThinMaterial, in: Circle())
             }
         }
         .padding()

@@ -20,7 +20,7 @@ struct RecipeDetailView: View {
         }
         .navigationTitle(recipe?.title ?? "Recipe")
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
             if recipe != nil {
@@ -43,6 +43,7 @@ struct RecipeDetailView: View {
                 if !recipe.summary.isEmpty {
                     Text(recipe.summary)
                         .font(.body)
+                        .foregroundStyle(.primary)
                 }
                 HStack(spacing: 16) {
                     InfoBadge(icon: "fork.knife", label: recipe.recipeType)
@@ -86,6 +87,9 @@ struct RecipeDetailView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 8)
+        }
     }
 }
 
@@ -97,8 +101,10 @@ struct InfoBadge: View {
         VStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.title3)
+                .foregroundStyle(.primary)
             Text(label)
                 .font(.caption2)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
