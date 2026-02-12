@@ -27,7 +27,7 @@ struct PreferencesView: View {
     @ViewBuilder
     private func preferencesForm(_ prefs: UserPreferences) -> some View {
         Form {
-            Section("Meal Slots") {
+            Section {
                 ForEach(MealSlot.allSlots, id: \.self) { slot in
                     Toggle(slot, isOn: Binding(
                         get: { prefs.defaultMealSlots.contains(slot) },
@@ -42,9 +42,13 @@ struct PreferencesView: View {
                         }
                     ))
                 }
+            } header: {
+                Text("Meal Slots")
+            } footer: {
+                Text("Turn meal slots on or off to match how you plan your day.")
             }
 
-            Section("Meal Times") {
+            Section {
                 DatePicker("Breakfast", selection: Binding(
                     get: { prefs.breakfastTime },
                     set: { prefs.breakfastTime = $0 }
@@ -59,6 +63,10 @@ struct PreferencesView: View {
                     get: { prefs.dinnerTime },
                     set: { prefs.dinnerTime = $0 }
                 ), displayedComponents: .hourAndMinute)
+            } header: {
+                Text("Meal Times")
+            } footer: {
+                Text("Used as suggested defaults when adding meals to the calendar.")
             }
 
             Section("Shopping List") {
