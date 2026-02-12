@@ -33,11 +33,13 @@ struct InventoryView: View {
                             "No Inventory",
                             systemImage: "refrigerator",
                             description: Text("Track what ingredients you have on hand.")
-                        ) {
+                        )
+                        .overlay(alignment: .bottom) {
                             Button("Add First Ingredient", systemImage: "plus") {
                                 showingAddItem = true
                             }
                             .buttonStyle(.borderedProminent)
+                            .padding(.bottom, 12)
                         }
                     } else {
                         ContentUnavailableView(

@@ -25,8 +25,8 @@ struct DayView: View {
             dateNavigationBar
 
             List {
-                ForEach(MealSlot.allSlots, id: \.self) { slot in
-                    Section(slot) {
+                ForEach(MealSlot.allSlots, id: \.self) { (slot: String) in
+                    Section {
                         if let entry = entry(for: slot) {
                             mealEntryRow(entry)
                         } else {
@@ -35,12 +35,14 @@ struct DayView: View {
                             } label: {
                                 Label("Add \(slot)", systemImage: "plus.circle.fill")
                                     .font(.body.weight(.medium))
-                                    .foregroundStyle(.accent)
+                                    .foregroundStyle(Color.accentColor)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.vertical, 10)
                             }
                             .buttonStyle(.plain)
                         }
+                    } header: {
+                        Text(slot)
                     }
                 }
             }
