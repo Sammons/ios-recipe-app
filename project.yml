@@ -1,0 +1,55 @@
+name: RecipeApp
+options:
+  bundleIdPrefix: io.sammons
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "26.2"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    GENERATE_INFOPLIST_FILE: true
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  RecipeApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/RecipeApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.sammons.recipe-app
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+  RecipeAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/RecipeAppTests
+    dependencies:
+      - target: RecipeApp
+    settings:
+      base:
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/RecipeApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RecipeApp"
+  RecipeAppUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/RecipeAppUITests
+    dependencies:
+      - target: RecipeApp
+    settings:
+      base:
+        TEST_TARGET_NAME: RecipeApp
+schemes:
+  RecipeApp:
+    build:
+      targets:
+        RecipeApp: all
+        RecipeAppTests: [testing]
+        RecipeAppUITests: [testing]
+    test:
+      targets:
+        - RecipeAppTests
+        - RecipeAppUITests

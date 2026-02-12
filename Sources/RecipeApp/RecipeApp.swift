@@ -3,6 +3,10 @@ import SwiftUI
 
 @main
 struct RecipeApp: App {
+    static let isUITest = ProcessInfo.processInfo.arguments.contains("UITEST")
+    private static let inMemory = ProcessInfo.processInfo.arguments.contains("UITEST_INMEMORY")
+    static let shouldSeed = ProcessInfo.processInfo.arguments.contains("UITEST_SEED")
+
     @Environment(\.scenePhase) private var scenePhase
     @State private var showMealCompletion = false
     @State private var overdueEntries: [MealPlanEntry] = []
@@ -14,17 +18,20 @@ struct RecipeApp: App {
                     MealCompletionSheet(overdueEntries: overdueEntries)
                 }
         }
-        .modelContainer(for: [
-            Recipe.self,
-            Ingredient.self,
-            RecipeIngredient.self,
-            MealPlanEntry.self,
-            InventoryItem.self,
-            ShoppingListItem.self,
-            UserPreferences.self,
-        ])
+        .modelContainer(
+            for: [
+                Recipe.self,
+                Ingredient.self,
+                RecipeIngredient.self,
+                MealPlanEntry.self,
+                InventoryItem.self,
+                ShoppingListItem.self,
+                UserPreferences.self,
+            ],
+            inMemory: Self.inMemory
+        )
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
+            if newPhase == .active && !RecipeApp.isUITest {
                 checkOverdueMeals()
             }
         }

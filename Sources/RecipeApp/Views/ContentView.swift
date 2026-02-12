@@ -24,7 +24,9 @@ enum AppTab: String, CaseIterable {
 }
 
 struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedTab: AppTab = .calendar
+    @State private var didSeed = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -55,6 +57,12 @@ struct ContentView: View {
             HelpView()
                 .tag(AppTab.help)
                 .tabItem { Label(AppTab.help.rawValue, systemImage: AppTab.help.icon) }
+        }
+        .onAppear {
+            if !didSeed && RecipeApp.shouldSeed {
+                SeedData.seedIfEmpty(context: modelContext)
+                didSeed = true
+            }
         }
     }
 }

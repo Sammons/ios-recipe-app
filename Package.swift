@@ -16,7 +16,12 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "RecipeApp"
+            name: "RecipeApp",
+            exclude: ["RecipeApp.swift"]
+        ),
+        .testTarget(
+            name: "RecipeAppTests",
+            dependencies: ["RecipeApp"]
         ),
     ]
 )

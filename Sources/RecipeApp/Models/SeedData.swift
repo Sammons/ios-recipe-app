@@ -1,7 +1,6 @@
 import Foundation
 import SwiftData
 
-@MainActor
 struct SeedData {
     static func seedIfEmpty(context: ModelContext) {
         let descriptor = FetchDescriptor<Recipe>()

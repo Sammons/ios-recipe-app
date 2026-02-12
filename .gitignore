@@ -1,12 +1,12 @@
 # Swift / SwiftPM
 .build/
-*.xcodeproj
-*.xcworkspace
+build/
 xcuserdata/
 DerivedData/
 *.dSYM
 *.ipa
 Package.resolved
+screenshots/
 
 # xtool
 .xtool/

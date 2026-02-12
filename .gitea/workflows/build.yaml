@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  REQUIRED_PLATFORMS: iOS
+  SIMULATOR_NAME: "iPhone 17 Pro"
 
 jobs:
   build:
@@ -19,36 +19,231 @@ jobs:
       - name: Swift version
         run: swift --version
 
-      - name: Ensure simulator runtimes
-        run: |
-          echo "=== Installed SDKs ==="
-          xcodebuild -showsdks 2>/dev/null || true
-          echo ""
-          echo "=== Simulator Runtimes ==="
-          xcrun simctl list runtimes 2>/dev/null || true
-          echo ""
-          for platform in $REQUIRED_PLATFORMS; do
-            sdk_name=$(echo "$platform" | tr '[:upper:]' '[:lower:]')simulator
-            if xcodebuild -showsdks 2>/dev/null | grep -q "$sdk_name"; then
-              echo "$platform SDK available — skipping download"
-            else
-              echo "$platform SDK not found — downloading..."
-              xcodebuild -downloadPlatform "$platform"
-              echo "$platform download complete"
-            fi
-          done
+      - name: Generate Xcode project
+        run: ~/bin/xcodegen generate
 
       - name: Resolve dependencies
         run: swift package resolve
 
-      - name: Build package
-        run: swift build
-
-      - name: Build for iOS (xcodebuild)
+      - name: Build and test (xcodebuild)
         run: |
-          xcodebuild \
+          rm -rf build/TestResults.xcresult
+          xcodebuild test \
+            -project RecipeApp.xcodeproj \
             -scheme RecipeApp \
-            -destination 'generic/platform=iOS Simulator' \
-            -skipPackagePluginValidation \
-            -skipMacroValidation \
-            build
+            -destination "platform=iOS Simulator,name=$SIMULATOR_NAME" \
+            -resultBundlePath build/TestResults.xcresult \
+            -quiet
+
+      - name: Extract test evidence
+        if: always()
+        run: |
+          XCRESULT="build/TestResults.xcresult"
+          mkdir -p screenshots
+
+          if [ ! -d "$XCRESULT" ]; then
+            echo "No xcresult bundle found — skipping evidence extraction"
+            exit 0
+          fi
+
+          # Export test attachments (screenshots captured by XCUITests)
+          xcrun xcresulttool export attachments \
+            --path "$XCRESULT" \
+            --output-path screenshots/raw || true
+
+          # Get test results as JSON
+          xcrun xcresulttool get test-results tests \
+            --path "$XCRESULT" > screenshots/test-results.json 2>/dev/null || true
+
+          # Copy attachment PNGs with human-readable names
+          if [ -f screenshots/raw/manifest.json ]; then
+            python3 << 'PYEOF'
+          import json, shutil, os, re
+
+          manifest = json.load(open("screenshots/raw/manifest.json"))
+          # Manifest is an array of test entries, each with an "attachments" list
+          for test_entry in manifest:
+              for att in test_entry.get("attachments", []):
+                  exported = att.get("exportedFileName", "")
+                  suggested = att.get("suggestedHumanReadableName", exported)
+                  src = os.path.join("screenshots/raw", exported)
+                  if not os.path.exists(src):
+                      continue
+                  # Strip UUID suffix: "01-calendar-launch_0_<UUID>.png" -> "01-calendar-launch.png"
+                  name = re.sub(r"_\d+_[A-F0-9-]+\.png$", ".png", suggested, flags=re.IGNORECASE)
+                  dst = os.path.join("screenshots", name)
+                  shutil.copy2(src, dst)
+                  print("Exported: %s" % name)
+          PYEOF
+          else
+            # Fallback: copy any PNGs from raw export directly
+            find screenshots/raw -name '*.png' -exec cp {} screenshots/ \; 2>/dev/null || true
+          fi
+
+          echo "Evidence extraction complete"
+          ls -la screenshots/*.png 2>/dev/null || echo "No screenshots found"
+
+      - name: Generate HTML evidence report
+        if: always()
+        run: |
+          python3 << 'PYEOF'
+          import json, os, glob
+
+          commit = os.popen("git rev-parse --short HEAD").read().strip()
+          date = os.popen("date -u '+%Y-%m-%d %H:%M UTC'").read().strip()
+
+          # Parse test results
+          test_results = []
+          results_file = "screenshots/test-results.json"
+          if os.path.exists(results_file):
+              try:
+                  data = json.load(open(results_file))
+                  def walk_tests(node, suite=""):
+                      name = node.get("name", "")
+                      node_type = node.get("nodeType", node.get("type", ""))
+                      if node_type == "Test Case":
+                          status = node.get("result", "unknown")
+                          duration = node.get("duration", "")
+                          test_results.append({
+                              "name": name,
+                              "suite": suite,
+                              "status": str(status),
+                              "duration": str(duration)
+                          })
+                      children = node.get("children", [])
+                      child_suite = name if node_type == "Test Suite" else suite
+                      for child in children:
+                          walk_tests(child, child_suite)
+                  # testNodes is the top-level array
+                  for root in data.get("testNodes", [data]):
+                      walk_tests(root)
+              except Exception as e:
+                  print(f"Warning: could not parse test results: {e}")
+
+          # Find screenshots (exclude subdirectories)
+          screenshots = sorted(
+              f for f in glob.glob("screenshots/*.png")
+              if os.path.isfile(f)
+          )
+
+          def status_badge(s):
+              s = s.lower()
+              if s in ("passed", "expected failure", "success"):
+                  return '<span style="color:#4caf50">PASS</span>'
+              elif s in ("failed", "failure"):
+                  return '<span style="color:#f44336">FAIL</span>'
+              return f'<span style="color:#ff9800">{s.upper()}</span>'
+
+          passed = sum(1 for t in test_results if t["status"].lower() in ("passed", "expected failure", "success"))
+          failed = sum(1 for t in test_results if t["status"].lower() in ("failed", "failure"))
+          total = len(test_results)
+
+          # Build HTML
+          html = f"""<!DOCTYPE html>
+          <html>
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>RecipeApp Test Evidence</title>
+          <style>
+          body {{ font-family: system-ui; max-width: 1000px; margin: 0 auto; padding: 2rem; background: #1a1a2e; color: #eee; }}
+          h1 {{ border-bottom: 2px solid #e94560; padding-bottom: 0.5rem; }}
+          h2 {{ color: #e94560; margin-top: 2rem; }}
+          .meta {{ color: #888; font-size: 0.85rem; margin-bottom: 2rem; }}
+          .summary {{ display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }}
+          .card {{ background: #16213e; border-radius: 8px; padding: 1rem 1.5rem; text-align: center; min-width: 100px; }}
+          .card .num {{ font-size: 2rem; font-weight: bold; }}
+          .card.pass .num {{ color: #4caf50; }}
+          .card.fail .num {{ color: #f44336; }}
+          .card.total .num {{ color: #2196f3; }}
+          table {{ width: 100%; border-collapse: collapse; margin-bottom: 2rem; }}
+          th, td {{ padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid #2a2a4e; }}
+          th {{ color: #888; font-size: 0.85rem; text-transform: uppercase; }}
+          .gallery {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }}
+          .shot {{ background: #16213e; border-radius: 12px; padding: 1rem; }}
+          .shot img {{ width: 100%; border-radius: 8px; }}
+          .shot p {{ margin: 0.5rem 0 0; font-size: 0.9rem; color: #aaa; }}
+          </style>
+          </head>
+          <body>
+          <h1>RecipeApp Test Evidence</h1>
+          <div class="meta">
+          <p>Commit <code>{commit}</code> &middot; {date}</p>
+          </div>
+          """
+
+          if test_results:
+              html += f"""
+          <div class="summary">
+          <div class="card pass"><div class="num">{passed}</div><div>Passed</div></div>
+          <div class="card fail"><div class="num">{failed}</div><div>Failed</div></div>
+          <div class="card total"><div class="num">{total}</div><div>Total</div></div>
+          </div>
+          <h2>Test Results</h2>
+          <table>
+          <tr><th>Test</th><th>Status</th><th>Duration</th></tr>
+          """
+              for t in test_results:
+                  try:
+                      dur = f'{float(t["duration"]):.2f}s'
+                  except (ValueError, TypeError):
+                      dur = t["duration"] or ""
+                  html += f'<tr><td>{t["name"]}</td><td>{status_badge(t["status"])}</td><td>{dur}</td></tr>\n'
+              html += "</table>\n"
+          else:
+              html += '<p style="color:#ff9800">No test result data available.</p>\n'
+
+          if screenshots:
+              html += '<h2>Screenshots</h2>\n<div class="gallery">\n'
+              for img in screenshots:
+                  name = os.path.basename(img).replace(".png", "")
+                  html += f'<div class="shot"><img src="{os.path.basename(img)}" alt="{name}"><p>{name}</p></div>\n'
+              html += '</div>\n'
+          else:
+              html += '<p style="color:#ff9800">No screenshots captured.</p>\n'
+
+          html += "</body>\n</html>"
+
+          with open("screenshots/index.html", "w") as f:
+              f.write(html)
+
+          print(f"Evidence report: {passed}/{total} passed, {len(screenshots)} screenshots")
+          PYEOF
+
+      - name: Deploy to pages.sammons.io
+        if: always()
+        run: |
+          # Clean up intermediate files before deploy
+          rm -rf screenshots/raw screenshots/test-results.json
+
+          # PR builds deploy to pr-<number>/ subpath; main pushes to root
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            DEPLOY_PATH="ios-recipe-app/pr-${{ github.event.pull_request.number }}/"
+          else
+            DEPLOY_PATH="ios-recipe-app/"
+          fi
+
+          # macOS openrsync is incompatible with rrsync; use GNU rsync
+          RSYNC_OPTS="-rltz --delete"
+          # Preserve PR evidence directories when deploying to main
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            RSYNC_OPTS="$RSYNC_OPTS --exclude pr-*"
+          fi
+          ~/local/bin/rsync $RSYNC_OPTS \
+            -e "ssh -i ~/.ssh/ci-deploy-key -o UserKnownHostsFile=~/.ssh/ci-deploy-known-hosts -o StrictHostKeyChecking=yes" \
+            screenshots/ \
+            "sammons@192.168.4.191:${DEPLOY_PATH}"
+          echo "Deployed to https://pages.sammons.io/${DEPLOY_PATH}"
+
+      - name: Comment on PR with evidence link
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          URL="https://pages.sammons.io/ios-recipe-app/pr-${PR_NUM}/"
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+
+          curl -s -X POST \
+            -H "Authorization: token ${{ github.token }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"body\": \"## Test Evidence\\n\\n[View test results and screenshots](${URL}) for commit \`${COMMIT_SHA}\`\"}" \
+            "https://git.sammons.io/api/v1/repos/${{ github.repository }}/issues/${PR_NUM}/comments"

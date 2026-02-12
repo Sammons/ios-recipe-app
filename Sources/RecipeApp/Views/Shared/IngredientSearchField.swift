@@ -12,6 +12,7 @@ struct IngredientSearchField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             TextField("Ingredient name", text: $text)
+                .accessibilityIdentifier("ingredient-field")
                 .onChange(of: text) { _, newValue in
                     updateSuggestions(query: newValue)
                 }

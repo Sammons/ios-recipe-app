@@ -31,10 +31,12 @@ struct InventoryFormView: View {
                 Section("Amount") {
                     HStack {
                         TextField("Quantity", value: $quantity, format: .number)
+                            .accessibilityIdentifier("quantity-field")
                             #if os(iOS)
                             .keyboardType(.decimalPad)
                             #endif
                         TextField("Unit (g, oz, cups...)", text: $unit)
+                            .accessibilityIdentifier("unit-field")
                     }
                 }
             }
