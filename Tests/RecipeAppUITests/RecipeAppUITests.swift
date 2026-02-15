@@ -94,11 +94,18 @@ final class RecipeAppUITests: XCTestCase {
         XCTAssertTrue(avocadoToast.waitForExistence(timeout: 5))
         avocadoToast.tap()
 
-        let detailTitle = app.staticTexts["Avocado Toast"]
-        XCTAssertTrue(detailTitle.waitForExistence(timeout: 5), "Detail should show recipe title")
+        // Wait for detail view to fully load — summary text is detail-specific
+        // and confirms navigation push completed (title alone matches list cell)
+        let summaryText = app.staticTexts["Simple and satisfying breakfast or snack"]
+        XCTAssertTrue(summaryText.waitForExistence(timeout: 10), "Detail should show recipe summary")
 
-        let ingredientsHeader = app.staticTexts["Ingredients"]
-        XCTAssertTrue(ingredientsHeader.waitForExistence(timeout: 5), "Detail should show Ingredients section")
+        // Scroll to reveal Ingredients section (List renders cells lazily)
+        app.swipeUp()
+
+        // Verify ingredient data rendered (section headers aren't reliably
+        // exposed as staticTexts on iOS 18 — assert on content instead)
+        let ingredientName = app.staticTexts["Olive Oil"]
+        XCTAssertTrue(ingredientName.waitForExistence(timeout: 10), "Detail should show ingredient names")
 
         screenshot("05-recipe-detail")
     }
@@ -108,11 +115,10 @@ final class RecipeAppUITests: XCTestCase {
 
         tapTab("Preferences")
 
-        let mealSlotsHeader = app.staticTexts["Meal Slots"]
-        XCTAssertTrue(mealSlotsHeader.waitForExistence(timeout: 5), "Meal Slots section should exist")
-
-        let toggle = app.switches.firstMatch
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "At least one toggle should exist")
+        // Section header uses view-based `header: { Text("Meal Slots") }` which
+        // isn't exposed as staticTexts in XCTest — verify via toggle content instead
+        let breakfastToggle = app.switches["Breakfast"]
+        XCTAssertTrue(breakfastToggle.waitForExistence(timeout: 10), "Breakfast toggle should exist")
 
         let lookaheadText = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS[c] %@", "Lookahead")

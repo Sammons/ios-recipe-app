@@ -48,7 +48,7 @@ struct RecipeBookView: View {
                     ForEach(groupedRecipes, id: \.0) { letter, recipes in
                         Section(letter) {
                             ForEach(recipes) { recipe in
-                                NavigationLink(value: recipe.persistentModelID) {
+                                NavigationLink(value: recipe) {
                                     RecipeRowView(recipe: recipe)
                                 }
                             }
@@ -60,8 +60,8 @@ struct RecipeBookView: View {
                 }
             }
             .navigationTitle("Recipe Book")
-            .navigationDestination(for: PersistentIdentifier.self) { id in
-                RecipeDetailView(recipeID: id)
+            .navigationDestination(for: Recipe.self) { recipe in
+                RecipeDetailView(recipe: recipe)
             }
             .searchable(text: $searchText, prompt: "Search recipes")
             .toolbar {
