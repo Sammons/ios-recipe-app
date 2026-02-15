@@ -3,11 +3,14 @@ import SwiftData
 
 @MainActor
 struct MealCompletionService {
+    /// Returns overdue meal plan entries from the last 3 days.
+    /// Capped to prevent unbounded accumulation for users who don't complete meals.
     static func overdueEntries(context: ModelContext) -> [MealPlanEntry] {
         let now = Date()
+        let cutoff = Calendar.current.date(byAdding: .day, value: -3, to: now) ?? now
         let descriptor = FetchDescriptor<MealPlanEntry>(
             predicate: #Predicate {
-                $0.date < now && $0.status == "planned"
+                $0.date < now && $0.date >= cutoff && $0.status == "planned"
             },
             sortBy: [SortDescriptor(\MealPlanEntry.date)]
         )

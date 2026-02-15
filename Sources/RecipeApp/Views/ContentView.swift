@@ -3,20 +3,20 @@ import SwiftUI
 
 enum AppTab: String, CaseIterable {
     case calendar = "Calendar"
-    case recipeBuilder = "Recipe Builder"
+    case recipeBook = "Recipe Book"
     case shoppingList = "Shopping List"
     case inventory = "Inventory"
-    case recipeBook = "Recipe Book"
+    case recipeBuilder = "Recipe Builder"
     case preferences = "Preferences"
     case help = "Help"
 
     var icon: String {
         switch self {
         case .calendar: "calendar"
-        case .recipeBuilder: "hammer"
+        case .recipeBook: "book"
         case .shoppingList: "cart"
         case .inventory: "refrigerator"
-        case .recipeBook: "book"
+        case .recipeBuilder: "hammer"
         case .preferences: "gear"
         case .help: "questionmark.circle"
         }
@@ -34,9 +34,9 @@ struct ContentView: View {
                 .tag(AppTab.calendar)
                 .tabItem { Label(AppTab.calendar.rawValue, systemImage: AppTab.calendar.icon) }
 
-            RecipeBuilderView()
-                .tag(AppTab.recipeBuilder)
-                .tabItem { Label(AppTab.recipeBuilder.rawValue, systemImage: AppTab.recipeBuilder.icon) }
+            RecipeBookView()
+                .tag(AppTab.recipeBook)
+                .tabItem { Label(AppTab.recipeBook.rawValue, systemImage: AppTab.recipeBook.icon) }
 
             ShoppingListView()
                 .tag(AppTab.shoppingList)
@@ -46,9 +46,9 @@ struct ContentView: View {
                 .tag(AppTab.inventory)
                 .tabItem { Label(AppTab.inventory.rawValue, systemImage: AppTab.inventory.icon) }
 
-            RecipeBookView()
-                .tag(AppTab.recipeBook)
-                .tabItem { Label(AppTab.recipeBook.rawValue, systemImage: AppTab.recipeBook.icon) }
+            RecipeBuilderView()
+                .tag(AppTab.recipeBuilder)
+                .tabItem { Label(AppTab.recipeBuilder.rawValue, systemImage: AppTab.recipeBuilder.icon) }
 
             PreferencesView()
                 .tag(AppTab.preferences)
@@ -59,7 +59,7 @@ struct ContentView: View {
                 .tabItem { Label(AppTab.help.rawValue, systemImage: AppTab.help.icon) }
         }
         .onAppear {
-            if !didSeed && RecipeApp.shouldSeed {
+            if !didSeed && AppFlags.shouldSeed {
                 SeedData.seedIfEmpty(context: modelContext)
                 didSeed = true
             }
