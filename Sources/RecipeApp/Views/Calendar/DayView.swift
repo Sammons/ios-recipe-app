@@ -46,7 +46,9 @@ struct DayView: View {
                     }
                 }
             }
+            #if os(iOS)
             .listStyle(.insetGrouped)
+            #endif
         }
         .sheet(item: $showingRecipePicker) { slot in
             RecipePickerView { recipe in

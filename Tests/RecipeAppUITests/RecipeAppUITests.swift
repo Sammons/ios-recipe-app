@@ -12,15 +12,25 @@ final class RecipeAppUITests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// Tap a tab in the "More" menu (for tabs 5-7 that overflow on iPhone).
-    private func tapMoreTab(_ tabName: String) {
-        let moreTab = app.tabBars.buttons["More"]
-        XCTAssertTrue(moreTab.waitForExistence(timeout: 5), "More tab should exist")
-        moreTab.tap()
+    /// Tap a tab by name. On iOS 18+ all tabs are in a scrollable tab bar.
+    /// Falls back to the legacy "More" menu for older runtimes.
+    private func tapTab(_ tabName: String) {
+        let tabButton = app.tabBars.buttons[tabName]
+        if tabButton.waitForExistence(timeout: 3) {
+            tabButton.tap()
+            return
+        }
 
-        let row = app.tables.staticTexts[tabName]
-        XCTAssertTrue(row.waitForExistence(timeout: 5), "\(tabName) row should exist in More")
-        row.tap()
+        // Legacy fallback: tab behind "More" on iOS 17 and earlier
+        let moreTab = app.tabBars.buttons["More"]
+        if moreTab.waitForExistence(timeout: 3) {
+            moreTab.tap()
+            let row = app.tables.staticTexts[tabName]
+            XCTAssertTrue(row.waitForExistence(timeout: 5), "\(tabName) row should exist in More")
+            row.tap()
+        } else {
+            XCTFail("Could not find tab '\(tabName)' in tab bar or More menu")
+        }
     }
 
     /// Capture a screenshot and attach it to the test result.
@@ -48,31 +58,22 @@ final class RecipeAppUITests: XCTestCase {
     func testTabNavigation() {
         app.launch()
 
-        // First 4 tabs are directly visible in the tab bar
-        let directTabs = ["Calendar", "Recipe Builder", "Shopping List", "Inventory"]
-        for tab in directTabs {
-            app.tabBars.buttons[tab].tap()
+        let allTabs = ["Calendar", "Recipe Book", "Shopping List", "Inventory",
+                       "Recipe Builder", "Preferences", "Help"]
+
+        for tab in allTabs {
+            tapTab(tab)
             let navBar = app.navigationBars[tab]
             XCTAssertTrue(navBar.waitForExistence(timeout: 5), "\(tab) nav bar should appear")
         }
 
-        screenshot("02-tabs-inventory")
-
-        // Remaining tabs are behind "More" on iPhone
-        let moreTabs = ["Recipe Book", "Preferences", "Help"]
-        for tab in moreTabs {
-            tapMoreTab(tab)
-            let navBar = app.navigationBars[tab]
-            XCTAssertTrue(navBar.waitForExistence(timeout: 5), "\(tab) nav bar should appear")
-        }
-
-        screenshot("03-tabs-help")
+        screenshot("02-tabs-help")
     }
 
     func testRecipeBookShowsSeedRecipes() {
         app.launch()
 
-        tapMoreTab("Recipe Book")
+        tapTab("Recipe Book")
 
         // Recipes are alphabetically grouped; check ones near the top
         let avocadoToast = app.staticTexts["Avocado Toast"]
@@ -87,7 +88,7 @@ final class RecipeAppUITests: XCTestCase {
     func testRecipeDetail() {
         app.launch()
 
-        tapMoreTab("Recipe Book")
+        tapTab("Recipe Book")
 
         let avocadoToast = app.staticTexts["Avocado Toast"]
         XCTAssertTrue(avocadoToast.waitForExistence(timeout: 5))
@@ -105,7 +106,7 @@ final class RecipeAppUITests: XCTestCase {
     func testPreferencesNoCrash() {
         app.launch()
 
-        tapMoreTab("Preferences")
+        tapTab("Preferences")
 
         let mealSlotsHeader = app.staticTexts["Meal Slots"]
         XCTAssertTrue(mealSlotsHeader.waitForExistence(timeout: 5), "Meal Slots section should exist")
@@ -124,17 +125,17 @@ final class RecipeAppUITests: XCTestCase {
     func testInventoryAddItem() {
         app.launch()
 
-        app.tabBars.buttons["Inventory"].tap()
+        tapTab("Inventory")
 
         let addButton = app.buttons["Add Item"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 5))
         addButton.tap()
 
-        // Fill ingredient name
+        // Fill ingredient name — dismiss keyboard before moving to next field
         let ingredientField = app.textFields["ingredient-field"]
         XCTAssertTrue(ingredientField.waitForExistence(timeout: 5))
         ingredientField.tap()
-        ingredientField.typeText("Test Flour")
+        ingredientField.typeText("Test Flour\n")
 
         // Fill quantity
         let quantityField = app.textFields["quantity-field"]

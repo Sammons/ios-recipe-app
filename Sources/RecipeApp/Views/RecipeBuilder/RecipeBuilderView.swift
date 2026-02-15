@@ -4,7 +4,7 @@ import SwiftUI
 struct RecipeBuilderView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var editorMinimized = false
-    @State private var chatMinimized = false
+    @State private var tipsMinimized = true
 
     var body: some View {
         NavigationStack {
@@ -14,9 +14,7 @@ struct RecipeBuilderView: View {
                         panes
                     }
                 } else {
-                    VStack(spacing: 0) {
-                        panes
-                    }
+                    RecipeEditorPane()
                 }
             }
             .navigationTitle("Recipe Builder")
@@ -39,11 +37,11 @@ struct RecipeBuilderView: View {
         Divider()
 
         MinimizablePane(
-            title: "Chat",
-            icon: "bubble.left.and.bubble.right",
-            isMinimized: $chatMinimized
+            title: "Tips",
+            icon: "lightbulb",
+            isMinimized: $tipsMinimized
         ) {
-            ChatPane()
+            RecipeTipsPane()
         }
     }
 }
@@ -200,81 +198,35 @@ struct RecipeEditorPane: View {
     }
 }
 
-struct ChatPane: View {
-    @State private var messages: [ChatMessage] = [
-        ChatMessage(
-            text: "I'm your recipe assistant! Describe a dish and I'll help you build a recipe.",
-            isUser: false
-        ),
+struct RecipeTipsPane: View {
+    private let tips = [
+        (icon: "star", title: "Start Simple", detail: "Name your recipe and pick a type before adding ingredients."),
+        (icon: "scalemass", title: "Consistent Units", detail: "Use the same units across recipes (e.g., always grams or always cups) for accurate shopping lists."),
+        (icon: "person.2", title: "Servings Matter", detail: "Set accurate serving counts so meal plan scaling works correctly."),
+        (icon: "clock", title: "Prep vs Cook Time", detail: "Separate prep and cook times help with meal planning around your schedule."),
+        (icon: "list.number", title: "Clear Steps", detail: "Write each instruction as a single action. Short steps are easier to follow while cooking."),
     ]
-    @State private var inputText = ""
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(messages) { message in
-                            ChatBubble(message: message)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(tips, id: \.title) { tip in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: tip.icon)
+                            .font(.title3)
+                            .foregroundStyle(Color.accentColor)
+                            .frame(width: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(tip.title)
+                                .font(.subheadline.bold())
+                            Text(tip.detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                    .padding()
                 }
-                .onChange(of: messages.count) {
-                    if let last = messages.last {
-                        proxy.scrollTo(last.id, anchor: .bottom)
-                    }
-                }
-            }
-
-            Divider()
-
-            HStack {
-                TextField("Describe a recipe...", text: $inputText)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { sendMessage() }
-                Button("Send", systemImage: "arrow.up.circle.fill") {
-                    sendMessage()
-                }
-                .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             .padding()
-        }
-    }
-
-    private func sendMessage() {
-        let text = inputText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-        messages.append(ChatMessage(text: text, isUser: true))
-        inputText = ""
-        messages.append(
-            ChatMessage(
-                text:
-                    "Recipe AI features coming soon! For now, use the editor pane to build your recipe manually.",
-                isUser: false
-            )
-        )
-    }
-}
-
-struct ChatMessage: Identifiable {
-    let id = UUID()
-    let text: String
-    let isUser: Bool
-}
-
-struct ChatBubble: View {
-    let message: ChatMessage
-
-    var body: some View {
-        HStack {
-            if message.isUser { Spacer() }
-            Text(message.text)
-                .padding(10)
-                .background(message.isUser ? Color.accentColor : Color.gray.opacity(0.15))
-                .foregroundStyle(message.isUser ? .white : .primary)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            if !message.isUser { Spacer() }
         }
     }
 }

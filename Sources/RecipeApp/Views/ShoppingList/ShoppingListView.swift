@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ShoppingListView: View {
     @Query(sort: \ShoppingListItem.addedAt) private var items: [ShoppingListItem]
+    @Query private var preferences: [UserPreferences]
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddItem = false
     @State private var showChecked = false
@@ -127,7 +128,8 @@ struct ShoppingListView: View {
     }
 
     private func generateList() {
-        ShoppingListGenerator.generate(context: modelContext)
+        let lookahead = preferences.first?.shoppingLookaheadDays ?? 7
+        ShoppingListGenerator.generate(context: modelContext, lookaheadDays: lookahead)
     }
 }
 

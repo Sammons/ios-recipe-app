@@ -172,6 +172,69 @@ struct ShoppingListGeneratorTests {
         #expect(items.count == 0)
     }
 
+    @Test @MainActor func separatesItemsByUnit() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let ingredient = Ingredient(name: "tomatoes", displayName: "Tomatoes")
+        context.insert(ingredient)
+
+        let recipe1 = Recipe(title: "Salad", servings: 1)
+        context.insert(recipe1)
+        let ri1 = RecipeIngredient(quantity: 3, unit: "medium", recipe: recipe1, ingredient: ingredient)
+        context.insert(ri1)
+
+        let recipe2 = Recipe(title: "Sauce", servings: 1)
+        context.insert(recipe2)
+        let ri2 = RecipeIngredient(quantity: 400, unit: "g", recipe: recipe2, ingredient: ingredient)
+        context.insert(ri2)
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        let entry1 = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.lunch, servings: 1, recipe: recipe1)
+        context.insert(entry1)
+        let entry2 = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 1, recipe: recipe2)
+        context.insert(entry2)
+
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        #expect(items.count == 2)
+        let units = Set(items.map(\.unit))
+        #expect(units == ["medium", "g"])
+    }
+
+    @Test @MainActor func inventoryDeductionMatchesUnit() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let ingredient = Ingredient(name: "flour")
+        context.insert(ingredient)
+
+        let recipe = Recipe(title: "Bread", servings: 1)
+        context.insert(recipe)
+        let ri = RecipeIngredient(quantity: 500, unit: "g", recipe: recipe, ingredient: ingredient)
+        context.insert(ri)
+
+        // Inventory in cups — should NOT deduct from grams need
+        let inventory = InventoryItem(quantity: 2, unit: "cups", ingredient: ingredient)
+        context.insert(inventory)
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        let entry = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 1, recipe: recipe)
+        context.insert(entry)
+
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        #expect(items.count == 1)
+        #expect(items[0].quantity == 500) // No deduction since units differ
+        #expect(items[0].unit == "g")
+    }
+
     @Test @MainActor func emptyMealPlanProducesNoItems() throws {
         let container = try makeTestContainer()
         let context = container.mainContext

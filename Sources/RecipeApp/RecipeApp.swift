@@ -3,48 +3,49 @@ import SwiftUI
 
 @main
 struct RecipeApp: App {
-    static let isUITest = ProcessInfo.processInfo.arguments.contains("UITEST")
-    private static let inMemory = ProcessInfo.processInfo.arguments.contains("UITEST_INMEMORY")
-    static let shouldSeed = ProcessInfo.processInfo.arguments.contains("UITEST_SEED")
+    let sharedContainer: ModelContainer
 
-    var body: some Scene {
-        WindowGroup {
-            RootView()
-        }
-        .modelContainer(
-            for: [
-                Recipe.self,
-                Ingredient.self,
-                RecipeIngredient.self,
-                MealPlanEntry.self,
-                InventoryItem.self,
-                ShoppingListItem.self,
-                UserPreferences.self,
-            ],
-            inMemory: Self.inMemory
-        )
-    }
-}
-
-private struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.modelContext) private var modelContext
     @State private var showMealCompletion = false
     @State private var overdueEntries: [MealPlanEntry] = []
 
-    var body: some View {
-        ContentView()
-            .sheet(isPresented: $showMealCompletion) {
-                MealCompletionSheet(overdueEntries: overdueEntries)
-            }
-            .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active && !RecipeApp.isUITest {
-                    let entries = MealCompletionService.overdueEntries(context: modelContext)
-                    if !entries.isEmpty {
-                        overdueEntries = entries
-                        showMealCompletion = true
-                    }
+    init() {
+        let schema = Schema([
+            Recipe.self,
+            Ingredient.self,
+            RecipeIngredient.self,
+            MealPlanEntry.self,
+            InventoryItem.self,
+            ShoppingListItem.self,
+            UserPreferences.self,
+        ])
+        let config = ModelConfiguration(isStoredInMemoryOnly: AppFlags.inMemory)
+        // swiftlint:disable:next force_try
+        self.sharedContainer = try! ModelContainer(for: schema, configurations: config)
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .sheet(isPresented: $showMealCompletion) {
+                    MealCompletionSheet(overdueEntries: overdueEntries)
                 }
+        }
+        .modelContainer(sharedContainer)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && !AppFlags.isUITest {
+                checkOverdueMeals()
             }
+        }
+    }
+
+    @MainActor
+    private func checkOverdueMeals() {
+        let context = sharedContainer.mainContext
+        let entries = MealCompletionService.overdueEntries(context: context)
+        if !entries.isEmpty {
+            overdueEntries = entries
+            showMealCompletion = true
+        }
     }
 }

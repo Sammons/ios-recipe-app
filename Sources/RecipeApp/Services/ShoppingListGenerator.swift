@@ -24,9 +24,9 @@ struct ShoppingListGenerator {
         )
         guard let entries = try? context.fetch(entryDescriptor) else { return }
 
-        // Aggregate ingredient needs by (ingredient name, unit) to avoid mixing units
+        // Aggregate ingredient needs by (name, unit) pair
         struct NeedKey: Hashable {
-            let ingredientName: String
+            let name: String
             let unit: String
         }
         var needed: [NeedKey: (quantity: Double, ingredient: Ingredient)] = [:]
@@ -36,7 +36,7 @@ struct ShoppingListGenerator {
                 recipe.servings > 0 ? Double(entry.servings) / Double(recipe.servings) : 1.0
             for ri in recipe.recipeIngredients {
                 guard let ingredient = ri.ingredient else { continue }
-                let key = NeedKey(ingredientName: ingredient.name, unit: ri.unit)
+                let key = NeedKey(name: ingredient.name, unit: ri.unit)
                 let qty = ri.quantity * servingMultiplier
                 if var existing = needed[key] {
                     existing.quantity += qty
@@ -47,20 +47,21 @@ struct ShoppingListGenerator {
             }
         }
 
-        // Subtract inventory (only from matching-unit needs)
+        // Subtract inventory (only when units match)
         let inventoryDescriptor = FetchDescriptor<InventoryItem>()
         let inventory = (try? context.fetch(inventoryDescriptor)) ?? []
-        let inventoryMap: [String: (quantity: Double, unit: String)] = Dictionary(
-            uniqueKeysWithValues: inventory.compactMap { item in
-                item.ingredient.map { ($0.name, (item.quantity, item.unit)) }
-            }
-        )
+        var inventoryMap: [NeedKey: Double] = [:]
+        for item in inventory {
+            guard let ingredient = item.ingredient else { continue }
+            let key = NeedKey(name: ingredient.name, unit: item.unit)
+            inventoryMap[key, default: 0] += item.quantity
+        }
 
         // Create shopping list items
         for (key, need) in needed {
             var toBuy = need.quantity
-            if let onHand = inventoryMap[key.ingredientName], onHand.unit == key.unit {
-                toBuy -= onHand.quantity
+            if let onHand = inventoryMap[key] {
+                toBuy -= onHand
             }
             guard toBuy > 0 else { continue }
 
