@@ -1,4 +1,4 @@
 version: 1
-bundleID: io.sammons.recipe-app
-displayName: Recipe App
+bundleID: io.sammons.feedmeplanner
+displayName: "Feed Me: Meal Planner"
 deploymentTarget: 17.0

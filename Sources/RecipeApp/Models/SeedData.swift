@@ -187,6 +187,7 @@ struct SeedData {
             )
             context.insert(recipe)
 
+            var recipeIngredients: [RecipeIngredient] = []
             for (name, qty, unit) in ings {
                 let ingredient = ingredients[name.lowercased()] ?? createIngredient(
                     name: name, context: context)
@@ -197,7 +198,18 @@ struct SeedData {
                     ingredient: ingredient
                 )
                 context.insert(ri)
+                recipeIngredients.append(ri)
             }
+            // Set relationship from both sides to ensure SwiftData resolves
+            // inverse relationships correctly with in-memory stores
+            recipe.recipeIngredients = recipeIngredients
+        }
+
+        // Ensure UserPreferences exists for deterministic UI tests
+        let prefsDescriptor = FetchDescriptor<UserPreferences>()
+        let prefsCount = (try? context.fetchCount(prefsDescriptor)) ?? 0
+        if prefsCount == 0 {
+            context.insert(UserPreferences())
         }
 
         try? context.save()

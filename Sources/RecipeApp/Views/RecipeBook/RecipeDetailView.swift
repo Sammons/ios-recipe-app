@@ -2,38 +2,23 @@ import SwiftData
 import SwiftUI
 
 struct RecipeDetailView: View {
-    @Environment(\.modelContext) private var modelContext
-    let recipeID: PersistentIdentifier
+    @Bindable var recipe: Recipe
     @State private var showingEdit = false
 
-    private var recipe: Recipe? {
-        modelContext.model(for: recipeID) as? Recipe
-    }
-
     var body: some View {
-        Group {
-            if let recipe {
-                recipeContent(recipe)
-            } else {
-                ContentUnavailableView("Recipe Not Found", systemImage: "book")
-            }
-        }
-        .navigationTitle(recipe?.title ?? "Recipe")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
-        .toolbar {
-            if recipe != nil {
+        recipeContent(recipe)
+            .navigationTitle(recipe.title)
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
                 Button("Edit", systemImage: "pencil") {
                     showingEdit = true
                 }
             }
-        }
-        .sheet(isPresented: $showingEdit) {
-            if let recipe {
+            .sheet(isPresented: $showingEdit) {
                 RecipeFormView(mode: .edit(recipe))
             }
-        }
     }
 
     @ViewBuilder

@@ -49,9 +49,8 @@ struct HelpView: View {
 
                     DisclosureGroup("Recipe Builder") {
                         Text(
-                            "The Recipe Builder tab offers a two-pane editor. "
-                                + "Use the chat pane for recipe ideas (AI features coming soon) "
-                                + "and the editor pane to build the recipe."
+                            "Use the Recipe Builder tab to create recipes from scratch "
+                                + "with ingredients, timing, and step-by-step instructions."
                         )
                     }
                 }
@@ -144,6 +143,12 @@ struct PrivacyView: View {
 }
 
 struct AboutView: View {
+    private var versionString: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "Version \(version) (\(build))"
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             Spacer()
@@ -161,7 +166,7 @@ struct AboutView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            Text("Version 1.0")
+            Text(versionString)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
 

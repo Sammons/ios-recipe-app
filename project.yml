@@ -18,9 +18,17 @@ targets:
       - path: Sources/RecipeApp
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.sammons.recipe-app
+        PRODUCT_BUNDLE_IDENTIFIER: io.sammons.feedmeplanner
+        DEVELOPMENT_TEAM: 4NV3FL9B87
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "Apple Distribution"
+        PROVISIONING_PROFILE_SPECIFIER: "FeedMe Distribution"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_CFBundleDisplayName: "Feed Me: Meal Planner"
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Sammons Software LLC"
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
   RecipeAppTests:
     type: bundle.unit-test
     platform: iOS
