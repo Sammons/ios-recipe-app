@@ -56,10 +56,12 @@ struct IngredientSearchField: View {
         }
         let lowered = trimmed.lowercased()
         let descriptor = FetchDescriptor<Ingredient>(
-            predicate: #Predicate { $0.name.contains(lowered) },
-            sortBy: [SortDescriptor(\Ingredient.name)]
+            predicate: #Predicate {
+                $0.name.contains(lowered) || $0.displayName.contains(lowered)
+            },
+            sortBy: [SortDescriptor(\Ingredient.displayName)]
         )
-        suggestions = (try? modelContext.fetch(descriptor)) ?? []
+        suggestions = Array(((try? modelContext.fetch(descriptor)) ?? []).prefix(12))
         showSuggestions = !suggestions.isEmpty
     }
 }
