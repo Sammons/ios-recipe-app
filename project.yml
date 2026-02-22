@@ -19,6 +19,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.sammons.feedmeplanner
+        PRODUCT_NAME: RecipeApp
+        ENABLE_TESTABILITY: YES
         DEVELOPMENT_TEAM: 4NV3FL9B87
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "Apple Distribution"
@@ -38,6 +40,7 @@ targets:
       - target: RecipeApp
     settings:
       base:
+        PRODUCT_NAME: RecipeAppTests
         BUNDLE_LOADER: "$(TEST_HOST)"
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/RecipeApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RecipeApp"
   RecipeAppUITests:
@@ -49,6 +52,7 @@ targets:
       - target: RecipeApp
     settings:
       base:
+        PRODUCT_NAME: RecipeAppUITests
         TEST_TARGET_NAME: RecipeApp
 schemes:
   RecipeApp:

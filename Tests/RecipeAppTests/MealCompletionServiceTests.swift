@@ -39,6 +39,40 @@ struct MealCompletionServiceTests {
         #expect(overdue.count == 0)
     }
 
+    @Test @MainActor func overdueEntriesExcludesTodayMeals() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let recipe = Recipe(title: "Test")
+        context.insert(recipe)
+
+        let today = DateHelpers.startOfDay(Date())
+        let entry = MealPlanEntry(date: today, mealSlot: MealSlot.dinner, servings: 1, recipe: recipe)
+        context.insert(entry)
+
+        try context.save()
+
+        let overdue = MealCompletionService.overdueEntries(context: context)
+        #expect(overdue.count == 0)
+    }
+
+    @Test @MainActor func overdueEntriesExcludesMealsOlderThanThreeDays() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let recipe = Recipe(title: "Test")
+        context.insert(recipe)
+
+        let fourDaysAgo = DateHelpers.addDays(-4, to: DateHelpers.startOfDay(Date()))
+        let entry = MealPlanEntry(date: fourDaysAgo, mealSlot: MealSlot.dinner, servings: 1, recipe: recipe)
+        context.insert(entry)
+
+        try context.save()
+
+        let overdue = MealCompletionService.overdueEntries(context: context)
+        #expect(overdue.count == 0)
+    }
+
     @Test @MainActor func overdueEntriesSortedByDate() throws {
         let container = try makeTestContainer()
         let context = container.mainContext

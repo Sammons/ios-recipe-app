@@ -23,7 +23,7 @@ struct WeekView: View {
 
             ScrollView {
                 LazyVStack(spacing: 8) {
-                    ForEach(weekDays, id: \.self) { day in
+                    ForEach(Array(weekDays.enumerated()), id: \.offset) { index, day in
                         Button {
                             selectedDate = day
                         } label: {
@@ -35,6 +35,10 @@ struct WeekView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .contentShape(Rectangle())
+                        .accessibilityIdentifier("week-day-row-\(index)")
+                        .accessibilityValue(
+                            DateHelpers.isSameDay(day, selectedDate) ? "selected" : "not-selected")
                     }
                 }
                 .padding()
@@ -110,8 +114,10 @@ struct WeekDayRow: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
         .background(isToday ? Color.accentColor.opacity(0.05) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .contentShape(Rectangle())
     }
 }

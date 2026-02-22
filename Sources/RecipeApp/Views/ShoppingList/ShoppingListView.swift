@@ -37,6 +37,11 @@ struct ShoppingListView: View {
                             "Generate a list from your meal plan or add items manually."
                         )
                     )
+
+                    Button("Generate from Meal Plan", systemImage: "wand.and.stars") {
+                        generateList()
+                    }
+                    .accessibilityIdentifier("shopping-generate-empty-state")
                 } else {
                     ForEach(groupedUnchecked, id: \.0) { category, categoryItems in
                         Section(category) {
@@ -67,6 +72,10 @@ struct ShoppingListView: View {
                                             .foregroundStyle(.tertiary)
                                     }
                                 }
+
+                                Button("Clear Purchased", systemImage: "trash", role: .destructive) {
+                                    clearChecked()
+                                }
                             }
                         }
                     }
@@ -75,22 +84,14 @@ struct ShoppingListView: View {
             .navigationTitle("Shopping List")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Add", systemImage: "plus") {
-                        showingAddItem = true
+                    Button("Generate", systemImage: "wand.and.stars") {
+                        generateList()
                     }
+                    .accessibilityIdentifier("shopping-generate-toolbar")
                 }
                 ToolbarItem(placement: .secondaryAction) {
-                    Menu {
-                        Button("Generate from Meal Plan", systemImage: "wand.and.stars") {
-                            generateList()
-                        }
-                        if !checkedItems.isEmpty {
-                            Button("Clear Purchased", systemImage: "trash", role: .destructive) {
-                                clearChecked()
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
+                    Button("Add", systemImage: "plus") {
+                        showingAddItem = true
                     }
                 }
             }

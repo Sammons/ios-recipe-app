@@ -41,6 +41,20 @@ xtool run
 xtool dev
 ```
 
+### Stable regression test run (macOS)
+
+```bash
+# Runs build-for-testing + unit tests + retried UI regression tests
+./ci/run-stable-tests.sh
+```
+
+### Stable regression test run (Linux via Mac Mini)
+
+```bash
+# Syncs repo to mini-unknown.lan and runs the same stable test script there
+./ci/run-stable-tests-remote.sh .
+```
+
 ## Project Structure
 
 ```
@@ -60,6 +74,7 @@ RecipeApp/
 ## CI
 
 Gitea Actions workflow builds on every push/PR to `main` using the `macos-arm64` runner.
+The workflow calls `./ci/run-stable-tests.sh` for deterministic regression coverage.
 
 ## Architecture
 

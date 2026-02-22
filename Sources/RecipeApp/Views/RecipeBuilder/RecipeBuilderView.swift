@@ -143,6 +143,17 @@ struct RecipeEditorPane: View {
                 .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
+        #if os(iOS)
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    dismissKeyboard()
+                }
+            }
+        }
+        #endif
     }
 
     private func saveRecipe() {
@@ -196,6 +207,17 @@ struct RecipeEditorPane: View {
         ingredientRows = []
         instructions = [""]
     }
+
+    #if os(iOS)
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+    }
+    #endif
 }
 
 struct RecipeTipsPane: View {

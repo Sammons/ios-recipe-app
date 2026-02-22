@@ -1,14 +1,38 @@
 import SwiftData
 import SwiftUI
 
-enum AppTab: String, CaseIterable {
-    case calendar = "Calendar"
-    case recipeBook = "Recipe Book"
-    case shoppingList = "Shopping List"
-    case inventory = "Inventory"
-    case recipeBuilder = "Recipe Builder"
-    case preferences = "Preferences"
-    case help = "Help"
+enum AppTab: CaseIterable {
+    case calendar
+    case recipeBook
+    case shoppingList
+    case inventory
+    case recipeBuilder
+    case preferences
+    case help
+
+    var tabLabel: String {
+        switch self {
+        case .calendar: "Calendar"
+        case .recipeBook: "Recipes"
+        case .shoppingList: "List"
+        case .inventory: "Pantry"
+        case .recipeBuilder: "Builder"
+        case .preferences: "Prefs"
+        case .help: "Help"
+        }
+    }
+
+    var accessibilityLabel: String {
+        switch self {
+        case .calendar: "Calendar"
+        case .recipeBook: "Recipe Book"
+        case .shoppingList: "Shopping List"
+        case .inventory: "Inventory"
+        case .recipeBuilder: "Recipe Builder"
+        case .preferences: "Preferences"
+        case .help: "Help"
+        }
+    }
 
     var icon: String {
         switch self {
@@ -32,31 +56,52 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             CalendarView()
                 .tag(AppTab.calendar)
-                .tabItem { Label(AppTab.calendar.rawValue, systemImage: AppTab.calendar.icon) }
+                .tabItem {
+                    Label(AppTab.calendar.tabLabel, systemImage: AppTab.calendar.icon)
+                        .accessibilityLabel(AppTab.calendar.accessibilityLabel)
+                }
 
             RecipeBookView()
                 .tag(AppTab.recipeBook)
-                .tabItem { Label(AppTab.recipeBook.rawValue, systemImage: AppTab.recipeBook.icon) }
+                .tabItem {
+                    Label(AppTab.recipeBook.tabLabel, systemImage: AppTab.recipeBook.icon)
+                        .accessibilityLabel(AppTab.recipeBook.accessibilityLabel)
+                }
 
             ShoppingListView()
                 .tag(AppTab.shoppingList)
-                .tabItem { Label(AppTab.shoppingList.rawValue, systemImage: AppTab.shoppingList.icon) }
+                .tabItem {
+                    Label(AppTab.shoppingList.tabLabel, systemImage: AppTab.shoppingList.icon)
+                        .accessibilityLabel(AppTab.shoppingList.accessibilityLabel)
+                }
 
             InventoryView()
                 .tag(AppTab.inventory)
-                .tabItem { Label(AppTab.inventory.rawValue, systemImage: AppTab.inventory.icon) }
+                .tabItem {
+                    Label(AppTab.inventory.tabLabel, systemImage: AppTab.inventory.icon)
+                        .accessibilityLabel(AppTab.inventory.accessibilityLabel)
+                }
 
             RecipeBuilderView()
                 .tag(AppTab.recipeBuilder)
-                .tabItem { Label(AppTab.recipeBuilder.rawValue, systemImage: AppTab.recipeBuilder.icon) }
+                .tabItem {
+                    Label(AppTab.recipeBuilder.tabLabel, systemImage: AppTab.recipeBuilder.icon)
+                        .accessibilityLabel(AppTab.recipeBuilder.accessibilityLabel)
+                }
 
             PreferencesView()
                 .tag(AppTab.preferences)
-                .tabItem { Label(AppTab.preferences.rawValue, systemImage: AppTab.preferences.icon) }
+                .tabItem {
+                    Label(AppTab.preferences.tabLabel, systemImage: AppTab.preferences.icon)
+                        .accessibilityLabel(AppTab.preferences.accessibilityLabel)
+                }
 
             HelpView()
                 .tag(AppTab.help)
-                .tabItem { Label(AppTab.help.rawValue, systemImage: AppTab.help.icon) }
+                .tabItem {
+                    Label(AppTab.help.tabLabel, systemImage: AppTab.help.icon)
+                        .accessibilityLabel(AppTab.help.accessibilityLabel)
+                }
         }
         .onAppear {
             if !didSeed && AppFlags.shouldSeed {
