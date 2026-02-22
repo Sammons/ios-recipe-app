@@ -7,6 +7,9 @@ struct ShoppingListView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddItem = false
     @State private var showChecked = false
+    @State private var didEnsurePrefs = false
+
+    private let lookaheadQuickOptions = [3, 7, 14, 30]
 
     private var uncheckedItems: [ShoppingListItem] {
         items.filter { !$0.isChecked }
@@ -26,9 +29,58 @@ struct ShoppingListView: View {
         }
     }
 
+    private var lookaheadDays: Int {
+        preferences.first?.shoppingLookaheadDays ?? 7
+    }
+
+    private var lookaheadEndDateText: String {
+        let endDate = DateHelpers.addDays(lookaheadDays, to: DateHelpers.startOfDay(Date()))
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: endDate)
+    }
+
     var body: some View {
         NavigationStack {
             List {
+                Section("Plan Window") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Next \(lookaheadDays) days (through \(lookaheadEndDateText))")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("shopping-lookahead-summary")
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(lookaheadQuickOptions, id: \.self) { days in
+                                    Button {
+                                        setLookahead(days)
+                                    } label: {
+                                        Text("\(days)d")
+                                            .font(.subheadline.weight(.semibold))
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(
+                                                Capsule()
+                                                    .fill(
+                                                        lookaheadDays == days
+                                                            ? Color.accentColor
+                                                            : Color.secondary.opacity(0.15)
+                                                    )
+                                            )
+                                            .foregroundStyle(
+                                                lookaheadDays == days ? Color.white : Color.primary
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityIdentifier("shopping-lookahead-\(days)")
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+
                 if items.isEmpty {
                     ContentUnavailableView(
                         "Shopping List Empty",
@@ -38,7 +90,7 @@ struct ShoppingListView: View {
                         )
                     )
 
-                    Button("Generate from Meal Plan", systemImage: "wand.and.stars") {
+                    Button("Generate Next \(lookaheadDays) Days", systemImage: "wand.and.stars") {
                         generateList()
                     }
                     .accessibilityIdentifier("shopping-generate-empty-state")
@@ -98,6 +150,9 @@ struct ShoppingListView: View {
             .sheet(isPresented: $showingAddItem) {
                 ShoppingListAddView()
             }
+            .onAppear {
+                ensurePreferences()
+            }
         }
     }
 
@@ -129,8 +184,24 @@ struct ShoppingListView: View {
     }
 
     private func generateList() {
-        let lookahead = preferences.first?.shoppingLookaheadDays ?? 7
-        ShoppingListGenerator.generate(context: modelContext, lookaheadDays: lookahead)
+        ShoppingListGenerator.generate(context: modelContext, lookaheadDays: lookaheadDays)
+    }
+
+    private func setLookahead(_ days: Int) {
+        if let existing = preferences.first {
+            existing.shoppingLookaheadDays = days
+        } else {
+            modelContext.insert(UserPreferences(shoppingLookaheadDays: days))
+        }
+    }
+
+    private func ensurePreferences() {
+        guard !didEnsurePrefs else { return }
+        didEnsurePrefs = true
+        if preferences.isEmpty {
+            modelContext.insert(UserPreferences())
+            try? modelContext.save()
+        }
     }
 }
 

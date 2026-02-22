@@ -257,6 +257,24 @@ final class RecipeAppUITests: XCTestCase {
         screenshot("09-shopping-generate-visible")
     }
 
+    func testShoppingListQuickLookaheadPresetUpdatesSummary() {
+        app.launch()
+
+        tapTab("List")
+
+        let summary = app.staticTexts["shopping-lookahead-summary"]
+        XCTAssertTrue(summary.waitForExistence(timeout: 5), "Lookahead summary should exist")
+        XCTAssertTrue(summary.label.contains("7 days"), "Default lookahead should be 7 days")
+
+        let preset14 = app.buttons["shopping-lookahead-14"]
+        XCTAssertTrue(preset14.waitForExistence(timeout: 5), "14-day preset should exist")
+        preset14.tap()
+
+        XCTAssertTrue(summary.label.contains("14 days"), "Summary should reflect selected 14-day preset")
+
+        screenshot("12-shopping-lookahead-preset")
+    }
+
     func testWeekViewRowCanBeTappedAcrossFullWidth() {
         app.launch()
 
