@@ -55,6 +55,13 @@ xtool dev
 ./ci/run-stable-tests-remote.sh .
 ```
 
+### Static checks (macOS)
+
+```bash
+# Runs xcodebuild analyze + checks for unsafe operators (try!, as!)
+./ci/run-static-checks.sh
+```
+
 ## Project Structure
 
 ```

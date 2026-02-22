@@ -20,8 +20,19 @@ struct RecipeApp: App {
             UserPreferences.self,
         ])
         let config = ModelConfiguration(isStoredInMemoryOnly: AppFlags.inMemory)
-        // swiftlint:disable:next force_try
-        self.sharedContainer = try! ModelContainer(for: schema, configurations: config)
+
+        do {
+            self.sharedContainer = try ModelContainer(for: schema, configurations: config)
+        } catch {
+            print("ERROR: Failed to create ModelContainer: \(error.localizedDescription)")
+            print("Falling back to in-memory storage")
+            let fallbackConfig = ModelConfiguration(isStoredInMemoryOnly: true)
+            do {
+                self.sharedContainer = try ModelContainer(for: schema, configurations: fallbackConfig)
+            } catch {
+                fatalError("ERROR: Failed to create fallback in-memory ModelContainer: \(error.localizedDescription)")
+            }
+        }
     }
 
     var body: some Scene {
