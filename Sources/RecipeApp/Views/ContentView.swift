@@ -8,6 +8,7 @@ enum AppTab: CaseIterable {
     case inventory
     case recipeBuilder
     case preferences
+    case ingredientCatalog
     case help
 
     var tabLabel: String {
@@ -18,6 +19,7 @@ enum AppTab: CaseIterable {
         case .inventory: "Pantry"
         case .recipeBuilder: "Builder"
         case .preferences: "Prefs"
+        case .ingredientCatalog: "Catalog"
         case .help: "Help"
         }
     }
@@ -30,6 +32,7 @@ enum AppTab: CaseIterable {
         case .inventory: "Inventory"
         case .recipeBuilder: "Recipe Builder"
         case .preferences: "Preferences"
+        case .ingredientCatalog: "Ingredient Catalog"
         case .help: "Help"
         }
     }
@@ -42,6 +45,7 @@ enum AppTab: CaseIterable {
         case .inventory: "refrigerator"
         case .recipeBuilder: "hammer"
         case .preferences: "gear"
+        case .ingredientCatalog: "list.bullet.rectangle"
         case .help: "questionmark.circle"
         }
     }
@@ -96,6 +100,13 @@ struct ContentView: View {
                         .accessibilityLabel(AppTab.preferences.accessibilityLabel)
                 }
 
+            IngredientCatalogView()
+                .tag(AppTab.ingredientCatalog)
+                .tabItem {
+                    Label(AppTab.ingredientCatalog.tabLabel, systemImage: AppTab.ingredientCatalog.icon)
+                        .accessibilityLabel(AppTab.ingredientCatalog.accessibilityLabel)
+                }
+
             HelpView()
                 .tag(AppTab.help)
                 .tabItem {
@@ -104,8 +115,11 @@ struct ContentView: View {
                 }
         }
         .onAppear {
-            if !didSeed && AppFlags.shouldSeed {
-                SeedData.seedIfEmpty(context: modelContext)
+            if !didSeed {
+                if AppFlags.shouldSeed {
+                    SeedData.seedIfEmpty(context: modelContext)
+                }
+                IngredientCatalogSeeder.seedMissing(context: modelContext)
                 didSeed = true
             }
         }

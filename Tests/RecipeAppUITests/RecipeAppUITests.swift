@@ -27,6 +27,8 @@ final class RecipeAppUITests: XCTestCase {
             "Recipe Builder": ["Builder"],
             "Prefs": ["Preferences"],
             "Preferences": ["Prefs"],
+            "Catalog": ["Ingredient Catalog"],
+            "Ingredient Catalog": ["Catalog"],
         ]
         let candidates = [tabName] + (aliases[tabName] ?? [])
         let tabBar = app.tabBars.firstMatch
@@ -128,6 +130,7 @@ final class RecipeAppUITests: XCTestCase {
             ("Pantry", "Inventory"),
             ("Builder", "Recipe Builder"),
             ("Prefs", "Preferences"),
+            ("Catalog", "Ingredient Catalog"),
             ("Help", "Help"),
         ]
 
@@ -307,5 +310,28 @@ final class RecipeAppUITests: XCTestCase {
         doneButton.tap()
 
         screenshot("11-recipe-builder-keyboard-done")
+    }
+
+    func testShoppingListManualAddAutocompleteFindsCatalogItem() {
+        app.launch()
+
+        tapTab("Pantry")
+
+        let addButton = app.buttons["Add Item"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5), "Add button should exist")
+        addButton.tap()
+
+        let ingredientField = app.textFields["ingredient-field"]
+        XCTAssertTrue(ingredientField.waitForExistence(timeout: 5), "Ingredient field should exist")
+        ingredientField.tap()
+        ingredientField.typeText("aspar")
+
+        let suggestionButton = app.buttons["Asparagus"]
+        let suggestionText = app.staticTexts["Asparagus"]
+        let suggestionAppeared = suggestionButton.waitForExistence(timeout: 5)
+            || suggestionText.waitForExistence(timeout: 2)
+        XCTAssertTrue(suggestionAppeared, "Catalog-backed Asparagus suggestion should appear")
+
+        screenshot("13-shopping-autocomplete-catalog")
     }
 }

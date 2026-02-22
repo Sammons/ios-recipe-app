@@ -39,6 +39,13 @@ struct HelpView: View {
                         )
                     }
 
+                    DisclosureGroup("Ingredient Catalog") {
+                        Text(
+                            "Open the Ingredient Catalog from More to browse common ingredients. "
+                                + "Catalog items power autocomplete when adding ingredients manually."
+                        )
+                    }
+
                     DisclosureGroup("Inventory Tracking") {
                         Text(
                             "Use the Inventory tab to track what ingredients you have at home. "

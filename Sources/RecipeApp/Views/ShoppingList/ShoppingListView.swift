@@ -145,6 +145,7 @@ struct ShoppingListView: View {
                     Button("Add", systemImage: "plus") {
                         showingAddItem = true
                     }
+                    .accessibilityIdentifier("shopping-add-toolbar")
                 }
             }
             .sheet(isPresented: $showingAddItem) {
