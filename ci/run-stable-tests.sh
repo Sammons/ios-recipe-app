@@ -27,6 +27,15 @@ xcodebuild build-for-testing \
   -destination "platform=iOS Simulator,name=$SIMULATOR_NAME" \
   -quiet
 
+echo "==> Run functional flow tests"
+xcodebuild test-without-building \
+  -project "$PROJECT_PATH" \
+  -scheme "$SCHEME_NAME" \
+  -destination "platform=iOS Simulator,name=$SIMULATOR_NAME" \
+  -parallel-testing-enabled NO \
+  -only-testing:RecipeAppTests/FunctionalFlowTests \
+  -quiet
+
 echo "==> Run unit tests"
 xcodebuild test-without-building \
   -project "$PROJECT_PATH" \

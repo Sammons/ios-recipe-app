@@ -44,7 +44,7 @@ xtool dev
 ### Stable regression test run (macOS)
 
 ```bash
-# Runs build-for-testing + unit tests + retried UI regression tests
+# Runs build-for-testing + functional flow tests + unit tests + retried UI regression tests
 ./ci/run-stable-tests.sh
 ```
 
