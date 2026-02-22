@@ -95,7 +95,9 @@ struct DayView: View {
     }
 
     private func mealEntryRow(_ entry: MealPlanEntry) -> some View {
-        HStack {
+        let coverage = PantryCoverageService.mealCoverage(for: entry)
+
+        return HStack {
             VStack(alignment: .leading) {
                 Text(entry.recipe?.title ?? "Unknown Recipe")
                     .font(.headline)
@@ -103,6 +105,12 @@ struct DayView: View {
                 Text("\(entry.servings) serving\(entry.servings == 1 ? "" : "s")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if entry.status == MealStatus.planned {
+                    Label(coverageLabel(for: coverage), systemImage: coverage.level.symbolName)
+                        .font(.caption2)
+                        .foregroundStyle(coverage.level.color)
+                }
             }
 
             Spacer()
@@ -133,8 +141,46 @@ struct DayView: View {
         )
         modelContext.insert(entry)
     }
+
+    private func coverageLabel(for coverage: PantryMealCoverage) -> String {
+        switch coverage.level {
+        case .full:
+            return "Pantry ready"
+        case .partial:
+            return "\(coverage.coveredIngredients)/\(coverage.totalIngredients) ingredients"
+        case .missing:
+            if coverage.totalIngredients == 0 {
+                return "No ingredient data"
+            }
+            return "Missing ingredients"
+        }
+    }
 }
 
 extension String: @retroactive Identifiable {
     public var id: String { self }
+}
+
+private extension PantryCoverageLevel {
+    var color: Color {
+        switch self {
+        case .full:
+            return .green
+        case .partial:
+            return .orange
+        case .missing:
+            return .red
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .full:
+            return "checkmark.circle.fill"
+        case .partial:
+            return "exclamationmark.circle.fill"
+        case .missing:
+            return "xmark.circle.fill"
+        }
+    }
 }

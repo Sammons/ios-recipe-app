@@ -11,10 +11,18 @@ struct WeekView: View {
         (0..<7).map { DateHelpers.addDays($0, to: weekStart) }
     }
 
-    private func mealCount(for date: Date) -> Int {
+    private func entries(for date: Date) -> [MealPlanEntry] {
         let start = DateHelpers.startOfDay(date)
         let end = DateHelpers.endOfDay(date)
-        return allEntries.filter { $0.date >= start && $0.date < end }.count
+        return allEntries.filter { $0.date >= start && $0.date < end }
+    }
+
+    private func mealCount(for date: Date) -> Int {
+        entries(for: date).count
+    }
+
+    private func pantryCoverage(for date: Date) -> PantryDayCoverage {
+        PantryCoverageService.dayCoverage(for: entries(for: date))
     }
 
     var body: some View {
@@ -30,6 +38,7 @@ struct WeekView: View {
                             WeekDayRow(
                                 date: day,
                                 mealCount: mealCount(for: day),
+                                pantryCoverage: pantryCoverage(for: day),
                                 isSelected: DateHelpers.isSameDay(day, selectedDate),
                                 isToday: DateHelpers.isToday(day)
                             )
@@ -82,6 +91,7 @@ struct WeekView: View {
 struct WeekDayRow: View {
     let date: Date
     let mealCount: Int
+    let pantryCoverage: PantryDayCoverage
     let isSelected: Bool
     let isToday: Bool
 
@@ -97,17 +107,28 @@ struct WeekDayRow: View {
             }
             .frame(width: 50, alignment: .leading)
 
-            if mealCount > 0 {
-                Text("\(mealCount) meal\(mealCount == 1 ? "" : "s")")
-                    .font(.subheadline)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.15))
-                    .clipShape(Capsule())
-            } else {
-                Text("No meals planned")
-                    .font(.subheadline)
-                    .foregroundStyle(.tertiary)
+            VStack(alignment: .leading, spacing: 4) {
+                if mealCount > 0 {
+                    Text("\(mealCount) meal\(mealCount == 1 ? "" : "s")")
+                        .font(.subheadline)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.15))
+                        .clipShape(Capsule())
+                } else {
+                    Text("No meals planned")
+                        .font(.subheadline)
+                        .foregroundStyle(.tertiary)
+                }
+
+                if pantryCoverage.totalMeals > 0 {
+                    Label(
+                        "\(pantryCoverage.readyMeals)/\(pantryCoverage.totalMeals) pantry-ready",
+                        systemImage: pantryCoverage.level.symbolName
+                    )
+                    .font(.caption)
+                    .foregroundStyle(pantryCoverage.level.color)
+                }
             }
 
             Spacer()
@@ -119,5 +140,29 @@ struct WeekDayRow: View {
         .background(isToday ? Color.accentColor.opacity(0.05) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .contentShape(Rectangle())
+    }
+}
+
+private extension PantryCoverageLevel {
+    var color: Color {
+        switch self {
+        case .full:
+            return .green
+        case .partial:
+            return .orange
+        case .missing:
+            return .red
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .full:
+            return "checkmark.circle.fill"
+        case .partial:
+            return "exclamationmark.circle.fill"
+        case .missing:
+            return "xmark.circle.fill"
+        }
     }
 }

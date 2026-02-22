@@ -19,6 +19,10 @@ struct MonthView: View {
         return allEntries.filter { $0.date >= start && $0.date < end }
     }
 
+    private func coverage(for date: Date) -> PantryDayCoverage {
+        PantryCoverageService.dayCoverage(for: entries(for: date))
+    }
+
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
     private let weekdayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -45,6 +49,7 @@ struct MonthView: View {
                         DayCell(
                             date: date,
                             entries: entries(for: date),
+                            coverage: coverage(for: date),
                             isSelected: DateHelpers.isSameDay(date, selectedDate),
                             isToday: DateHelpers.isToday(date)
                         )
@@ -88,6 +93,7 @@ struct MonthView: View {
 struct DayCell: View {
     let date: Date
     let entries: [MealPlanEntry]
+    let coverage: PantryDayCoverage
     let isSelected: Bool
     let isToday: Bool
 
@@ -101,6 +107,12 @@ struct DayCell: View {
                 ForEach(mealDots, id: \.self) { color in
                     Circle()
                         .fill(color)
+                        .frame(width: 6, height: 6)
+                }
+
+                if coverage.totalMeals > 0 {
+                    Circle()
+                        .fill(coverage.level.color)
                         .frame(width: 6, height: 6)
                 }
             }
@@ -125,5 +137,18 @@ struct DayCell: View {
         if slots.contains(MealSlot.dinner) { dots.append(.orange) }
         if slots.contains(MealSlot.snack) { dots.append(.purple) }
         return dots
+    }
+}
+
+private extension PantryCoverageLevel {
+    var color: Color {
+        switch self {
+        case .full:
+            return .green
+        case .partial:
+            return .orange
+        case .missing:
+            return .red
+        }
     }
 }
