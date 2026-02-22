@@ -27,6 +27,9 @@ jobs:
       - name: Resolve dependencies
         run: swift package resolve
 
+      - name: Run static checks
+        run: ./ci/run-static-checks.sh
+
       - name: Run stable tests (unit + regression UI)
         run: ./ci/run-stable-tests.sh
 
