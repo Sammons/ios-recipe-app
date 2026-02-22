@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class RecipeAppUITests: XCTestCase {
 
     private var app: XCUIApplication!
@@ -15,19 +16,81 @@ final class RecipeAppUITests: XCTestCase {
     /// Tap a tab by name. On iOS 18+ all tabs are in a scrollable tab bar.
     /// Falls back to the legacy "More" menu for older runtimes.
     private func tapTab(_ tabName: String) {
-        let tabButton = app.tabBars.buttons[tabName]
-        if tabButton.waitForExistence(timeout: 3) {
-            tabButton.tap()
-            return
+        let aliases: [String: [String]] = [
+            "Recipes": ["Recipe Book"],
+            "Recipe Book": ["Recipes"],
+            "List": ["Shopping List"],
+            "Shopping List": ["List"],
+            "Pantry": ["Inventory"],
+            "Inventory": ["Pantry"],
+            "Builder": ["Recipe Builder"],
+            "Recipe Builder": ["Builder"],
+            "Prefs": ["Preferences"],
+            "Preferences": ["Prefs"],
+        ]
+        let candidates = [tabName] + (aliases[tabName] ?? [])
+        let tabBar = app.tabBars.firstMatch
+
+        // Try direct tab bar access first. On some runtimes, tabs are scrollable
+        // and may need a short horizontal swipe to reveal hidden items.
+        if tabBar.waitForExistence(timeout: 5) {
+            for _ in 0..<2 {
+                for candidate in candidates {
+                    let tabButton = tabBar.buttons[candidate]
+                    if tabButton.waitForExistence(timeout: 2) {
+                        tabButton.tap()
+                        return
+                    }
+                }
+                tabBar.swipeLeft()
+            }
         }
 
         // Legacy fallback: tab behind "More" on iOS 17 and earlier
-        let moreTab = app.tabBars.buttons["More"]
-        if moreTab.waitForExistence(timeout: 3) {
+        let moreTab = tabBar.buttons["More"]
+        if moreTab.waitForExistence(timeout: 5) {
             moreTab.tap()
-            let row = app.tables.staticTexts[tabName]
-            XCTAssertTrue(row.waitForExistence(timeout: 5), "\(tabName) row should exist in More")
-            row.tap()
+
+            // Overflow navigation may be presented as table, collection, or generic cells
+            // depending on iOS/runtime behavior.
+            for _ in 0..<2 {
+                for candidate in candidates {
+                    let tableCell = app.tables.cells.containing(.staticText, identifier: candidate).firstMatch
+                    if tableCell.waitForExistence(timeout: 2) {
+                        tableCell.tap()
+                        return
+                    }
+
+                    let collectionCell = app.collectionViews.cells.containing(.staticText, identifier: candidate).firstMatch
+                    if collectionCell.waitForExistence(timeout: 1) {
+                        collectionCell.tap()
+                        return
+                    }
+
+                    let genericCell = app.cells.containing(.staticText, identifier: candidate).firstMatch
+                    if genericCell.waitForExistence(timeout: 1) {
+                        genericCell.tap()
+                        return
+                    }
+
+                    let rowStaticText = app.staticTexts[candidate]
+                    if rowStaticText.waitForExistence(timeout: 1) {
+                        rowStaticText.tap()
+                        return
+                    }
+
+                    let rowButton = app.buttons[candidate]
+                    if rowButton.waitForExistence(timeout: 1) {
+                        rowButton.tap()
+                        return
+                    }
+                }
+
+                // Some runtimes need a second tap to expand overflow content.
+                moreTab.tap()
+            }
+
+            XCTFail("\(tabName) row should exist in More")
         } else {
             XCTFail("Could not find tab '\(tabName)' in tab bar or More menu")
         }
@@ -58,13 +121,20 @@ final class RecipeAppUITests: XCTestCase {
     func testTabNavigation() {
         app.launch()
 
-        let allTabs = ["Calendar", "Recipe Book", "Shopping List", "Inventory",
-                       "Recipe Builder", "Preferences", "Help"]
+        let allTabs: [(tab: String, nav: String)] = [
+            ("Calendar", "Calendar"),
+            ("Recipes", "Recipe Book"),
+            ("List", "Shopping List"),
+            ("Pantry", "Inventory"),
+            ("Builder", "Recipe Builder"),
+            ("Prefs", "Preferences"),
+            ("Help", "Help"),
+        ]
 
-        for tab in allTabs {
-            tapTab(tab)
-            let navBar = app.navigationBars[tab]
-            XCTAssertTrue(navBar.waitForExistence(timeout: 5), "\(tab) nav bar should appear")
+        for item in allTabs {
+            tapTab(item.tab)
+            let navBar = app.navigationBars[item.nav]
+            XCTAssertTrue(navBar.waitForExistence(timeout: 5), "\(item.nav) nav bar should appear")
         }
 
         screenshot("02-tabs-help")
@@ -73,7 +143,7 @@ final class RecipeAppUITests: XCTestCase {
     func testRecipeBookShowsSeedRecipes() {
         app.launch()
 
-        tapTab("Recipe Book")
+        tapTab("Recipes")
 
         // Recipes are alphabetically grouped; check ones near the top
         let avocadoToast = app.staticTexts["Avocado Toast"]
@@ -88,7 +158,7 @@ final class RecipeAppUITests: XCTestCase {
     func testRecipeDetail() {
         app.launch()
 
-        tapTab("Recipe Book")
+        tapTab("Recipes")
 
         let avocadoToast = app.staticTexts["Avocado Toast"]
         XCTAssertTrue(avocadoToast.waitForExistence(timeout: 5))
@@ -113,7 +183,7 @@ final class RecipeAppUITests: XCTestCase {
     func testPreferencesNoCrash() {
         app.launch()
 
-        tapTab("Preferences")
+        tapTab("Prefs")
 
         // Section header uses view-based `header: { Text("Meal Slots") }` which
         // isn't exposed as staticTexts in XCTest — verify via toggle content instead
@@ -131,7 +201,7 @@ final class RecipeAppUITests: XCTestCase {
     func testInventoryAddItem() {
         app.launch()
 
-        tapTab("Inventory")
+        tapTab("Pantry")
 
         let addButton = app.buttons["Add Item"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 5))
@@ -174,5 +244,50 @@ final class RecipeAppUITests: XCTestCase {
         XCTAssertTrue(navBar.waitForExistence(timeout: 5), "Calendar should render with empty data")
 
         screenshot("08-empty-state")
+    }
+
+    func testShoppingListShowsVisibleGenerateButton() {
+        app.launch()
+
+        tapTab("List")
+
+        let generateButton = app.buttons["shopping-generate-toolbar"]
+        XCTAssertTrue(generateButton.waitForExistence(timeout: 5), "Generate button should be visible in toolbar")
+
+        screenshot("09-shopping-generate-visible")
+    }
+
+    func testWeekViewRowCanBeTappedAcrossFullWidth() {
+        app.launch()
+
+        let weekSegment = app.buttons["Week"]
+        XCTAssertTrue(weekSegment.waitForExistence(timeout: 5), "Week segment should exist")
+        weekSegment.tap()
+
+        let row = app.buttons["week-day-row-0"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "Week row should exist")
+
+        let rightEdge = row.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+        rightEdge.tap()
+
+        XCTAssertEqual(row.value as? String, "selected", "Right-edge tap should still select the full row")
+
+        screenshot("10-week-row-full-hit-target")
+    }
+
+    func testRecipeBuilderKeyboardHasDoneAction() {
+        app.launch()
+
+        tapTab("Builder")
+
+        let titleField = app.textFields["Recipe Title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5), "Recipe title field should exist")
+        titleField.tap()
+
+        let doneButton = app.buttons["Done"]
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 5), "Keyboard toolbar should expose Done")
+        doneButton.tap()
+
+        screenshot("11-recipe-builder-keyboard-done")
     }
 }

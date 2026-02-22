@@ -27,7 +27,10 @@ struct RecipeApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .sheet(isPresented: $showMealCompletion) {
+                .sheet(
+                    isPresented: $showMealCompletion,
+                    onDismiss: { overdueEntries = [] }
+                ) {
                     MealCompletionSheet(overdueEntries: overdueEntries)
                 }
         }
@@ -43,9 +46,7 @@ struct RecipeApp: App {
     private func checkOverdueMeals() {
         let context = sharedContainer.mainContext
         let entries = MealCompletionService.overdueEntries(context: context)
-        if !entries.isEmpty {
-            overdueEntries = entries
-            showMealCompletion = true
-        }
+        overdueEntries = entries
+        showMealCompletion = !entries.isEmpty
     }
 }
