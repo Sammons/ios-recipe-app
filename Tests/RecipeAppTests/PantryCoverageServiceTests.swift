@@ -106,4 +106,45 @@ struct PantryCoverageServiceTests {
         #expect(coverage.totalMeals == 2)
         #expect(coverage.readyMeals == 1)
     }
+
+    @Test @MainActor func forecastDayCoverageConsumesInventoryAcrossDays() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let trout = Ingredient(name: "trout")
+        context.insert(trout)
+        context.insert(InventoryItem(quantity: 2, unit: "filets", ingredient: trout))
+
+        let troutDinner = Recipe(title: "Trout Dinner", servings: 1)
+        context.insert(troutDinner)
+        context.insert(RecipeIngredient(quantity: 2, unit: "filet", recipe: troutDinner, ingredient: trout))
+
+        let dayOne = DateHelpers.startOfDay(Date())
+        let dayTwo = DateHelpers.addDays(2, to: dayOne)
+
+        let firstEntry = MealPlanEntry(
+            date: dayOne,
+            mealSlot: MealSlot.dinner,
+            servings: 1,
+            recipe: troutDinner
+        )
+        let secondEntry = MealPlanEntry(
+            date: dayTwo,
+            mealSlot: MealSlot.dinner,
+            servings: 1,
+            recipe: troutDinner
+        )
+        context.insert(firstEntry)
+        context.insert(secondEntry)
+
+        let forecast = PantryCoverageService.forecastDayCoverage(
+            for: [dayOne, dayTwo],
+            entries: [firstEntry, secondEntry]
+        )
+
+        #expect(forecast[dayOne]?.readyMeals == 1)
+        #expect(forecast[dayOne]?.level == .full)
+        #expect(forecast[dayTwo]?.readyMeals == 0)
+        #expect(forecast[dayTwo]?.level == .missing)
+    }
 }

@@ -39,6 +39,9 @@ struct RecipeDetailView: View {
                         InfoBadge(icon: "flame", label: "Cook \(recipe.cookTimeMinutes)m")
                     }
                     InfoBadge(icon: "person.2", label: "\(recipe.servings) servings")
+                    if recipe.caloriesPerServing > 0 {
+                        InfoBadge(icon: "bolt.heart", label: "\(recipe.caloriesPerServing) cal")
+                    }
                 }
             }
 

@@ -8,6 +8,7 @@ final class Recipe {
     var prepTimeMinutes: Int
     var cookTimeMinutes: Int
     var servings: Int
+    var caloriesPerServing: Int
     var recipeType: String
     var instructions: [String]
     var createdAt: Date
@@ -25,6 +26,7 @@ final class Recipe {
         prepTimeMinutes: Int = 0,
         cookTimeMinutes: Int = 0,
         servings: Int = 1,
+        caloriesPerServing: Int = 0,
         recipeType: String = RecipeType.dinner,
         instructions: [String] = [],
         recipeIngredients: [RecipeIngredient] = [],
@@ -35,6 +37,7 @@ final class Recipe {
         self.prepTimeMinutes = prepTimeMinutes
         self.cookTimeMinutes = cookTimeMinutes
         self.servings = servings
+        self.caloriesPerServing = max(0, caloriesPerServing)
         self.recipeType = recipeType
         self.instructions = instructions
         self.createdAt = Date()

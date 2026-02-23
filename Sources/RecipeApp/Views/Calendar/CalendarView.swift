@@ -27,9 +27,15 @@ struct CalendarView: View {
                 case .day:
                     DayView(selectedDate: $selectedDate)
                 case .week:
-                    WeekView(selectedDate: $selectedDate)
+                    WeekView(
+                        selectedDate: $selectedDate,
+                        onOpenDay: openDay
+                    )
                 case .month:
-                    MonthView(selectedDate: $selectedDate)
+                    MonthView(
+                        selectedDate: $selectedDate,
+                        onOpenDay: openDay
+                    )
                 }
             }
             .navigationTitle("Calendar")
@@ -41,5 +47,10 @@ struct CalendarView: View {
                 }
             }
         }
+    }
+
+    private func openDay(_ date: Date) {
+        selectedDate = DateHelpers.startOfDay(date)
+        calendarMode = .day
     }
 }

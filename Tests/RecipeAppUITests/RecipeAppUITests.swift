@@ -357,4 +357,41 @@ final class RecipeAppUITests: XCTestCase {
 
         screenshot("14-shopping-autocomplete-alias")
     }
+
+    func testWeekViewDoubleTapOpensDayView() {
+        app.launch()
+
+        let weekSegment = app.buttons["Week"]
+        XCTAssertTrue(weekSegment.waitForExistence(timeout: 5))
+        weekSegment.tap()
+
+        let weekRow = (0..<7).lazy
+            .map { self.app.buttons["week-day-row-\($0)"] }
+            .first { $0.waitForExistence(timeout: 4) }
+
+        guard let row = weekRow else {
+            XCTFail("At least one week day row should be hittable")
+            return
+        }
+
+        row.doubleTap()
+
+        let addBreakfast = app.buttons["Add Breakfast"]
+        XCTAssertTrue(addBreakfast.waitForExistence(timeout: 8), "Double tap should drill into day view")
+
+        screenshot("15-week-doubletap-day")
+    }
+
+    func testRecipePickerShowsAddRecipeShortcut() {
+        app.launch()
+
+        let addBreakfast = app.buttons["Add Breakfast"]
+        XCTAssertTrue(addBreakfast.waitForExistence(timeout: 5))
+        addBreakfast.tap()
+
+        let addRecipeShortcut = app.buttons["picker-add-recipe"]
+        XCTAssertTrue(addRecipeShortcut.waitForExistence(timeout: 5), "Recipe picker should expose in-context add shortcut")
+
+        screenshot("16-recipe-picker-add-shortcut")
+    }
 }

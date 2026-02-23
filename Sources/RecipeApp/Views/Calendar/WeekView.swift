@@ -3,6 +3,7 @@ import SwiftUI
 
 struct WeekView: View {
     @Binding var selectedDate: Date
+    var onOpenDay: ((Date) -> Void)?
     @Query private var allEntries: [MealPlanEntry]
 
     private var weekStart: Date { DateHelpers.startOfWeek(selectedDate) }
@@ -21,8 +22,13 @@ struct WeekView: View {
         entries(for: date).count
     }
 
+    private var forecastCoverageByDay: [Date: PantryDayCoverage] {
+        PantryCoverageService.forecastDayCoverage(for: weekDays, entries: allEntries)
+    }
+
     private func pantryCoverage(for date: Date) -> PantryDayCoverage {
-        PantryCoverageService.dayCoverage(for: entries(for: date))
+        let dayKey = DateHelpers.startOfDay(date)
+        return forecastCoverageByDay[dayKey] ?? PantryCoverageService.dayCoverage(for: entries(for: date))
     }
 
     var body: some View {
@@ -45,6 +51,11 @@ struct WeekView: View {
                         }
                         .buttonStyle(.plain)
                         .contentShape(Rectangle())
+                        .simultaneousGesture(
+                            TapGesture(count: 2).onEnded {
+                                onOpenDay?(day)
+                            }
+                        )
                         .accessibilityIdentifier("week-day-row-\(index)")
                         .accessibilityValue(
                             DateHelpers.isSameDay(day, selectedDate) ? "selected" : "not-selected")

@@ -5,10 +5,21 @@ struct ShoppingListAddView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
+    let itemToEdit: ShoppingListItem?
+
     @State private var ingredientName = ""
     @State private var quantity: Double = 1
     @State private var unit = ""
     @State private var selectedIngredient: Ingredient?
+    @State private var didLoadExisting = false
+
+    init(itemToEdit: ShoppingListItem? = nil) {
+        self.itemToEdit = itemToEdit
+    }
+
+    private var isEditing: Bool {
+        itemToEdit != nil
+    }
 
     var body: some View {
         NavigationStack {
@@ -33,7 +44,7 @@ struct ShoppingListAddView: View {
                     }
                 }
             }
-            .navigationTitle("Add Item")
+            .navigationTitle(isEditing ? "Edit Item" : "Add Item")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -42,21 +53,32 @@ struct ShoppingListAddView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") { save() }
+                    Button(isEditing ? "Save" : "Add") { save() }
                         .disabled(ingredientName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
+            }
+            .onAppear {
+                loadExistingIfNeeded()
             }
         }
     }
 
     private func save() {
         let ingredient = selectedIngredient ?? findOrCreateIngredient(name: ingredientName)
-        let item = ShoppingListItem(
-            quantity: quantity,
-            unit: unit,
-            ingredient: ingredient
-        )
-        modelContext.insert(item)
+
+        if let existing = itemToEdit {
+            existing.quantity = quantity
+            existing.unit = unit
+            existing.ingredient = ingredient
+        } else {
+            let item = ShoppingListItem(
+                quantity: quantity,
+                unit: unit,
+                ingredient: ingredient
+            )
+            modelContext.insert(item)
+        }
+
         try? modelContext.save()
         dismiss()
     }
@@ -72,5 +94,14 @@ struct ShoppingListAddView: View {
         let ingredient = Ingredient(name: name)
         modelContext.insert(ingredient)
         return ingredient
+    }
+
+    private func loadExistingIfNeeded() {
+        guard !didLoadExisting, let item = itemToEdit else { return }
+        didLoadExisting = true
+        ingredientName = item.ingredient?.displayName ?? ""
+        quantity = item.quantity
+        unit = item.unit
+        selectedIngredient = item.ingredient
     }
 }

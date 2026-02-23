@@ -17,6 +17,7 @@ struct RecipeFormView: View {
     @State private var prepTimeMinutes = 0
     @State private var cookTimeMinutes = 0
     @State private var servings = 1
+    @State private var caloriesPerServing = 0
     @State private var recipeType = RecipeType.dinner
     @State private var ingredientRows: [IngredientRowData] = []
     @State private var instructions: [String] = []
@@ -44,6 +45,12 @@ struct RecipeFormView: View {
                     Stepper("Prep: \(prepTimeMinutes) min", value: $prepTimeMinutes, in: 0...480, step: 5)
                     Stepper("Cook: \(cookTimeMinutes) min", value: $cookTimeMinutes, in: 0...480, step: 5)
                     Stepper("Servings: \(servings)", value: $servings, in: 1...50)
+                    Stepper(
+                        "Calories/serving: \(caloriesPerServing == 0 ? "Unknown" : "\(caloriesPerServing)")",
+                        value: $caloriesPerServing,
+                        in: 0...5000,
+                        step: 10
+                    )
                 }
 
                 Section("Ingredients") {
@@ -100,6 +107,7 @@ struct RecipeFormView: View {
         prepTimeMinutes = recipe.prepTimeMinutes
         cookTimeMinutes = recipe.cookTimeMinutes
         servings = recipe.servings
+        caloriesPerServing = recipe.caloriesPerServing
         recipeType = recipe.recipeType
         instructions = recipe.instructions
         ingredientRows = recipe.recipeIngredients.map { ri in
@@ -122,6 +130,7 @@ struct RecipeFormView: View {
                 prepTimeMinutes: prepTimeMinutes,
                 cookTimeMinutes: cookTimeMinutes,
                 servings: servings,
+                caloriesPerServing: caloriesPerServing,
                 recipeType: recipeType,
                 instructions: instructions.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
             )
@@ -134,6 +143,7 @@ struct RecipeFormView: View {
             recipe.prepTimeMinutes = prepTimeMinutes
             recipe.cookTimeMinutes = cookTimeMinutes
             recipe.servings = servings
+            recipe.caloriesPerServing = caloriesPerServing
             recipe.recipeType = recipeType
             recipe.instructions = instructions.filter {
                 !$0.trimmingCharacters(in: .whitespaces).isEmpty

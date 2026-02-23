@@ -244,4 +244,82 @@ struct ShoppingListGeneratorTests {
         let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         #expect(items.count == 0)
     }
+
+    @Test @MainActor func aggregatesRepeatedIngredientAcrossPlannedMeals() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let trout = Ingredient(name: "trout")
+        context.insert(trout)
+
+        let troutRecipe = Recipe(title: "Trout", servings: 1)
+        context.insert(troutRecipe)
+        context.insert(RecipeIngredient(quantity: 2, unit: "filets", recipe: troutRecipe, ingredient: trout))
+
+        let dayOne = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        let dayTwo = DateHelpers.addDays(3, to: DateHelpers.startOfDay(Date()))
+        context.insert(MealPlanEntry(date: dayOne, mealSlot: MealSlot.lunch, servings: 1, recipe: troutRecipe))
+        context.insert(MealPlanEntry(date: dayTwo, mealSlot: MealSlot.dinner, servings: 1, recipe: troutRecipe))
+
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context, lookaheadDays: 7)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        #expect(items.count == 1)
+        #expect(items.first?.quantity == 4)
+    }
+
+    @Test @MainActor func normalizesPluralUnitsWhenAggregatingNeeds() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let trout = Ingredient(name: "trout")
+        context.insert(trout)
+
+        let recipeA = Recipe(title: "Trout A", servings: 1)
+        context.insert(recipeA)
+        context.insert(RecipeIngredient(quantity: 2, unit: "filets", recipe: recipeA, ingredient: trout))
+
+        let recipeB = Recipe(title: "Trout B", servings: 1)
+        context.insert(recipeB)
+        context.insert(RecipeIngredient(quantity: 2, unit: "filet", recipe: recipeB, ingredient: trout))
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        context.insert(MealPlanEntry(date: tomorrow, mealSlot: MealSlot.lunch, servings: 1, recipe: recipeA))
+        context.insert(MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 1, recipe: recipeB))
+
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context, lookaheadDays: 7)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        #expect(items.count == 1)
+        #expect(items.first?.quantity == 4)
+    }
+
+    @Test @MainActor func outputOrderIsDeterministicByCategoryAndName() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let zucchini = Ingredient(name: "zucchini", displayName: "Zucchini", category: IngredientCategory.vegetable)
+        let apples = Ingredient(name: "apples gala", displayName: "Apples Gala", category: IngredientCategory.other)
+        context.insert(zucchini)
+        context.insert(apples)
+
+        let mixedRecipe = Recipe(title: "Mixed", servings: 1)
+        context.insert(mixedRecipe)
+        context.insert(RecipeIngredient(quantity: 1, unit: "piece", recipe: mixedRecipe, ingredient: zucchini))
+        context.insert(RecipeIngredient(quantity: 1, unit: "piece", recipe: mixedRecipe, ingredient: apples))
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        context.insert(MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 1, recipe: mixedRecipe))
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context, lookaheadDays: 7)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>(sortBy: [SortDescriptor(\ShoppingListItem.addedAt)]))
+        let namesInOrder = items.compactMap(\.ingredient?.displayName)
+        #expect(namesInOrder == ["Zucchini", "Apples Gala"])
+    }
 }
