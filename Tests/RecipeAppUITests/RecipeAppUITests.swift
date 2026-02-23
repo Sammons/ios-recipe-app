@@ -334,4 +334,27 @@ final class RecipeAppUITests: XCTestCase {
 
         screenshot("13-shopping-autocomplete-catalog")
     }
+
+    func testShoppingListManualAddAutocompleteFindsAliasItem() {
+        app.launch()
+
+        tapTab("Pantry")
+
+        let addButton = app.buttons["Add Item"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5), "Add button should exist")
+        addButton.tap()
+
+        let ingredientField = app.textFields["ingredient-field"]
+        XCTAssertTrue(ingredientField.waitForExistence(timeout: 5), "Ingredient field should exist")
+        ingredientField.tap()
+        ingredientField.typeText("scallion")
+
+        let suggestionButton = app.buttons["Green Onions"]
+        let suggestionText = app.staticTexts["Green Onions"]
+        let suggestionAppeared = suggestionButton.waitForExistence(timeout: 5)
+            || suggestionText.waitForExistence(timeout: 2)
+        XCTAssertTrue(suggestionAppeared, "Alias query should resolve to canonical Green Onions suggestion")
+
+        screenshot("14-shopping-autocomplete-alias")
+    }
 }
