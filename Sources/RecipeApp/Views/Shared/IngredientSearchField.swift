@@ -48,20 +48,10 @@ struct IngredientSearchField: View {
     }
 
     private func updateSuggestions(query: String) {
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard trimmed.count >= 2 else {
-            suggestions = []
-            showSuggestions = false
-            return
-        }
-        let lowered = trimmed.lowercased()
-        let descriptor = FetchDescriptor<Ingredient>(
-            predicate: #Predicate {
-                $0.name.contains(lowered) || $0.displayName.contains(lowered)
-            },
-            sortBy: [SortDescriptor(\Ingredient.displayName)]
+        suggestions = IngredientAutocompleteService.suggestions(
+            context: modelContext,
+            query: query
         )
-        suggestions = Array(((try? modelContext.fetch(descriptor)) ?? []).prefix(12))
         showSuggestions = !suggestions.isEmpty
     }
 }
