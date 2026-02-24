@@ -9,10 +9,7 @@ MAX_UI_RETRIES="${MAX_UI_RETRIES:-3}"
 MAX_FUNCTIONAL_RETRIES="${MAX_FUNCTIONAL_RETRIES:-2}"
 MAX_UNIT_RETRIES="${MAX_UNIT_RETRIES:-2}"
 LAST_ATTEMPTS_USED=1
-declare -a RETRY_STAGE_ORDER=()
-declare -A RETRY_STAGE_ATTEMPTS=()
-declare -A RETRY_STAGE_MAX=()
-declare -A RETRY_STAGE_STATUS=()
+RETRY_RECORDS=""
 
 record_retry_usage() {
   local stage="$1"
@@ -20,28 +17,26 @@ record_retry_usage() {
   local attempts_used="$3"
   local status="$4"
 
-  if [ -z "${RETRY_STAGE_ATTEMPTS[$stage]+x}" ]; then
-    RETRY_STAGE_ORDER+=("$stage")
-  fi
-
-  RETRY_STAGE_ATTEMPTS["$stage"]="$attempts_used"
-  RETRY_STAGE_MAX["$stage"]="$max_retries"
-  RETRY_STAGE_STATUS["$stage"]="$status"
+  RETRY_RECORDS+="${stage}|${max_retries}|${attempts_used}|${status}"$'\n'
 }
 
 print_retry_summary() {
   local total_retries=0
   local stage
+  local max_retries
+  local attempts_used
+  local status
+  local retries_used
 
   echo "==> Retry summary"
-  for stage in "${RETRY_STAGE_ORDER[@]}"; do
-    local attempts_used="${RETRY_STAGE_ATTEMPTS[$stage]}"
-    local max_retries="${RETRY_STAGE_MAX[$stage]}"
-    local status="${RETRY_STAGE_STATUS[$stage]}"
-    local retries_used=$((attempts_used - 1))
+  while IFS='|' read -r stage max_retries attempts_used status; do
+    if [ -z "$stage" ]; then
+      continue
+    fi
+    retries_used=$((attempts_used - 1))
     total_retries=$((total_retries + retries_used))
     echo "==>   ${stage}: ${status} on attempt ${attempts_used}/${max_retries} (retries used: ${retries_used})"
-  done
+  done <<< "$RETRY_RECORDS"
   echo "==> Total retries used: ${total_retries}"
 }
 
