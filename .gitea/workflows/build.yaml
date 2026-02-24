@@ -30,7 +30,7 @@ jobs:
       - name: Run static checks
         run: ./ci/run-static-checks.sh
 
-      - name: Run stable tests (unit + regression UI)
+      - name: Run stable tests (logic + UX evidence gates)
         run: ./ci/run-stable-tests.sh
 
       - name: Extract test evidence

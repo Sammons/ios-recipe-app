@@ -216,6 +216,36 @@ struct SeedData {
         try? context.save()
     }
 
+    static func seedOverdueMealCheckinScenario(context: ModelContext) {
+        let existingDescriptor = FetchDescriptor<MealPlanEntry>()
+        let existingCount = (try? context.fetchCount(existingDescriptor)) ?? 0
+        guard existingCount == 0 else { return }
+
+        seedIfEmpty(context: context)
+
+        let recipeDescriptor = FetchDescriptor<Recipe>(sortBy: [SortDescriptor(\Recipe.title)])
+        guard let recipes = try? context.fetch(recipeDescriptor), recipes.count >= 2 else { return }
+
+        let start = DateHelpers.startOfDay(Date())
+        let yesterday = DateHelpers.addDays(-1, to: start)
+
+        let first = MealPlanEntry(
+            date: yesterday,
+            mealSlot: MealSlot.breakfast,
+            servings: 1,
+            recipe: recipes[0]
+        )
+        let second = MealPlanEntry(
+            date: yesterday,
+            mealSlot: MealSlot.dinner,
+            servings: 1,
+            recipe: recipes[1]
+        )
+        context.insert(first)
+        context.insert(second)
+        try? context.save()
+    }
+
     private static func createIngredients(context: ModelContext) -> [String: Ingredient] {
         let defs: [(String, String, String)] = [
             ("spaghetti", "Spaghetti", IngredientCategory.grain),

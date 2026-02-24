@@ -33,6 +33,17 @@ struct RecipeApp: App {
                 fatalError("ERROR: Failed to create fallback in-memory ModelContainer: \(error.localizedDescription)")
             }
         }
+
+        let context = sharedContainer.mainContext
+        if AppFlags.shouldSeed {
+            SeedData.seedIfEmpty(context: context)
+        }
+        if AppFlags.shouldSeedOverdueMeals {
+            SeedData.seedOverdueMealCheckinScenario(context: context)
+        }
+        if AppFlags.shouldSeed || AppFlags.shouldSeedOverdueMeals {
+            IngredientCatalogSeeder.seedMissing(context: context)
+        }
     }
 
     var body: some Scene {
@@ -42,12 +53,18 @@ struct RecipeApp: App {
                     isPresented: $showMealCompletion,
                     onDismiss: { overdueEntries = [] }
                 ) {
-                    MealCompletionSheet(overdueEntries: overdueEntries)
+                    MealCompletionSheet(
+                        overdueEntries: overdueEntries,
+                        onFinished: {
+                            overdueEntries = []
+                            showMealCompletion = false
+                        }
+                    )
                 }
         }
         .modelContainer(sharedContainer)
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active && !AppFlags.isUITest {
+            if newPhase == .active && (!AppFlags.isUITest || AppFlags.enableMealPromptDuringUITest) {
                 checkOverdueMeals()
             }
         }

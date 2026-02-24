@@ -57,6 +57,22 @@ struct ContentView: View {
     @State private var didSeed = false
 
     var body: some View {
+        mainTabView
+        .onAppear {
+            if !didSeed {
+                if AppFlags.shouldSeed {
+                    SeedData.seedIfEmpty(context: modelContext)
+                }
+                if AppFlags.shouldSeedOverdueMeals {
+                    SeedData.seedOverdueMealCheckinScenario(context: modelContext)
+                }
+                IngredientCatalogSeeder.seedMissing(context: modelContext)
+                didSeed = true
+            }
+        }
+    }
+
+    private var mainTabView: some View {
         TabView(selection: $selectedTab) {
             CalendarView()
                 .tag(AppTab.calendar)
@@ -113,15 +129,6 @@ struct ContentView: View {
                     Label(AppTab.help.tabLabel, systemImage: AppTab.help.icon)
                         .accessibilityLabel(AppTab.help.accessibilityLabel)
                 }
-        }
-        .onAppear {
-            if !didSeed {
-                if AppFlags.shouldSeed {
-                    SeedData.seedIfEmpty(context: modelContext)
-                }
-                IngredientCatalogSeeder.seedMissing(context: modelContext)
-                didSeed = true
-            }
         }
     }
 }

@@ -49,6 +49,7 @@ struct RecipeDetailView: View {
                 Section("Nutrition (per serving)") {
                     if recipe.caloriesPerServing > 0 {
                         nutritionRow(label: "Calories", value: "\(recipe.caloriesPerServing) cal")
+                            .accessibilityIdentifier("recipe-nutrition-calories")
                     }
                     if recipe.proteinGramsPerServing > 0 {
                         nutritionRow(label: "Protein", value: "\(recipe.proteinGramsPerServing) g")
@@ -81,6 +82,7 @@ struct RecipeDetailView: View {
                             .padding(.vertical, 6)
                             .background(Color.orange.opacity(0.12))
                             .clipShape(Capsule())
+                            .accessibilityIdentifier("recipe-allergen-chip")
                     }
                 }
             }
@@ -173,6 +175,7 @@ private struct IngredientCategoryBadge: View {
             .padding(.vertical, 3)
             .background(color.opacity(0.15))
             .clipShape(Capsule())
+            .accessibilityIdentifier("ingredient-category-badge")
     }
 
     private var color: Color {
