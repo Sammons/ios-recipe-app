@@ -3,15 +3,20 @@ import XCTest
 @MainActor
 final class RecipeAppUITests: XCTestCase {
 
+    private let defaultLaunchArguments = ["UITEST", "UITEST_INMEMORY", "UITEST_SEED"]
     private var app: XCUIApplication!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
-        app.launchArguments = ["UITEST", "UITEST_INMEMORY", "UITEST_SEED"]
     }
 
     // MARK: - Helpers
+
+    private func launchApp(_ arguments: [String]? = nil) {
+        app = XCUIApplication()
+        app.launchArguments = arguments ?? defaultLaunchArguments
+        app.launch()
+    }
 
     /// Tap a tab by name. On iOS 18+ all tabs are in a scrollable tab bar.
     /// Falls back to the legacy "More" menu for older runtimes.
@@ -109,7 +114,7 @@ final class RecipeAppUITests: XCTestCase {
     // MARK: - Tests
 
     func testAppLaunchShowsCalendar() {
-        app.launch()
+        launchApp()
 
         let navBar = app.navigationBars["Calendar"]
         XCTAssertTrue(navBar.waitForExistence(timeout: 5), "Calendar nav bar should appear on launch")
@@ -121,7 +126,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testTabNavigation() {
-        app.launch()
+        launchApp()
 
         let allTabs: [(tab: String, nav: String)] = [
             ("Calendar", "Calendar"),
@@ -144,7 +149,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testRecipeBookShowsSeedRecipes() {
-        app.launch()
+        launchApp()
 
         tapTab("Recipes")
 
@@ -159,7 +164,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testRecipeDetail() {
-        app.launch()
+        launchApp()
 
         tapTab("Recipes")
 
@@ -184,7 +189,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testPreferencesNoCrash() {
-        app.launch()
+        launchApp()
 
         tapTab("Prefs")
 
@@ -202,7 +207,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testInventoryAddItem() {
-        app.launch()
+        launchApp()
 
         tapTab("Pantry")
 
@@ -240,8 +245,7 @@ final class RecipeAppUITests: XCTestCase {
 
     func testEmptyStateNoCrash() {
         // Launch without UITEST_SEED to get empty state
-        app.launchArguments = ["UITEST", "UITEST_INMEMORY"]
-        app.launch()
+        launchApp(["UITEST", "UITEST_INMEMORY"])
 
         let navBar = app.navigationBars["Calendar"]
         XCTAssertTrue(navBar.waitForExistence(timeout: 5), "Calendar should render with empty data")
@@ -250,7 +254,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testShoppingListShowsVisibleGenerateButton() {
-        app.launch()
+        launchApp()
 
         tapTab("List")
 
@@ -261,7 +265,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testShoppingListQuickLookaheadPresetUpdatesSummary() {
-        app.launch()
+        launchApp()
 
         tapTab("List")
 
@@ -279,7 +283,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testWeekViewRowCanBeTappedAcrossFullWidth() {
-        app.launch()
+        launchApp()
 
         let weekSegment = app.buttons["Week"]
         XCTAssertTrue(weekSegment.waitForExistence(timeout: 5), "Week segment should exist")
@@ -297,7 +301,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testRecipeBuilderKeyboardHasDoneAction() {
-        app.launch()
+        launchApp()
 
         tapTab("Builder")
 
@@ -313,7 +317,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testShoppingListManualAddAutocompleteFindsCatalogItem() {
-        app.launch()
+        launchApp()
 
         tapTab("Pantry")
 
@@ -336,7 +340,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testShoppingListManualAddAutocompleteFindsAliasItem() {
-        app.launch()
+        launchApp()
 
         tapTab("Pantry")
 
@@ -359,7 +363,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testWeekViewDoubleTapOpensDayView() {
-        app.launch()
+        launchApp()
 
         let weekSegment = app.buttons["Week"]
         XCTAssertTrue(weekSegment.waitForExistence(timeout: 5))
@@ -383,7 +387,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testRecipePickerShowsAddRecipeShortcut() {
-        app.launch()
+        launchApp()
 
         let addBreakfast = app.buttons["Add Breakfast"]
         XCTAssertTrue(addBreakfast.waitForExistence(timeout: 5))
@@ -396,13 +400,12 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testMealCompletionSheetActionsRemoveRowsAndDismiss() {
-        app.launchArguments = [
+        launchApp([
             "UITEST",
             "UITEST_INMEMORY",
             "UITEST_SEED_OVERDUE_MEALS",
             "UITEST_ENABLE_MEAL_PROMPT",
-        ]
-        app.launch()
+        ])
 
         let mealCheckInNav = app.navigationBars["Meal Check-in"]
         XCTAssertTrue(mealCheckInNav.waitForExistence(timeout: 8), "Meal check-in sheet should appear")
@@ -436,7 +439,7 @@ final class RecipeAppUITests: XCTestCase {
     }
 
     func testRecipeDetailShowsNutritionAllergensAndIngredientCategories() {
-        app.launch()
+        launchApp()
 
         tapTab("Recipes")
 

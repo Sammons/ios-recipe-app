@@ -45,12 +45,44 @@ run_unit_tests() {
     -quiet
 }
 
+resolve_simulator_udid() {
+  xcrun simctl list devices available | awk -F '[()]' -v name="$SIMULATOR_NAME" '
+    {
+      candidate = $1
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", candidate)
+      if (candidate == name) {
+        print $2
+        exit
+      }
+    }
+  '
+}
+
+prepare_simulator() {
+  local udid
+  udid="$(resolve_simulator_udid)"
+
+  if [ -z "$udid" ]; then
+    echo "Warning: could not resolve simulator UDID for '$SIMULATOR_NAME'; falling back to global reset"
+    xcrun simctl shutdown all || true
+    xcrun simctl erase all || true
+    sleep 5
+    return
+  fi
+
+  xcrun simctl shutdown "$udid" || true
+  xcrun simctl erase "$udid" || true
+  xcrun simctl boot "$udid" || true
+  xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1 || true
+}
+
 retry_with_sim_reset() {
   local label="$1"
   local max_retries="$2"
   shift 2
 
   local attempt=1
+  prepare_simulator
   until "$@"; do
     if [ "$attempt" -ge "$max_retries" ]; then
       echo "${label} failed after ${max_retries} attempts" >&2
@@ -59,8 +91,7 @@ retry_with_sim_reset() {
 
     attempt=$((attempt + 1))
     echo "Retrying ${label} (attempt ${attempt}/${max_retries})"
-    xcrun simctl shutdown all || true
-    xcrun simctl erase all || true
+    prepare_simulator
     rm -rf "$RESULT_BUNDLE"
     sleep 5
   done
