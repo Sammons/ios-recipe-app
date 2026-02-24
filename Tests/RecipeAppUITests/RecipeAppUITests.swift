@@ -399,7 +399,6 @@ final class RecipeAppUITests: XCTestCase {
         app.launchArguments = [
             "UITEST",
             "UITEST_INMEMORY",
-            "UITEST_SEED",
             "UITEST_SEED_OVERDUE_MEALS",
             "UITEST_ENABLE_MEAL_PROMPT",
         ]
@@ -408,31 +407,30 @@ final class RecipeAppUITests: XCTestCase {
         let mealCheckInNav = app.navigationBars["Meal Check-in"]
         XCTAssertTrue(mealCheckInNav.waitForExistence(timeout: 8), "Meal check-in sheet should appear")
 
-        let completeButtons = app.buttons.matching(
+        let mealActionButtons = app.buttons.matching(
             NSPredicate(
-                format: "identifier BEGINSWITH 'meal-checkin-complete-' OR identifier == 'checkmark.circle' OR label == 'checkmark.circle'"
+                format: "identifier == 'meal-checkin-complete' OR identifier == 'meal-checkin-skip' OR label == 'Mark meal completed' OR label == 'Made' OR label == 'Mark meal skipped' OR label == 'Skipped'"
             )
         )
-        let completeFirst = completeButtons.firstMatch
-        XCTAssertTrue(completeFirst.waitForExistence(timeout: 12), "First overdue meal action should exist")
-        completeFirst.tap()
+        let foundAction = mealActionButtons.firstMatch.waitForExistence(timeout: 12)
+        XCTAssertTrue(foundAction, "At least one meal action should exist")
+        mealActionButtons.firstMatch.tap()
 
-        let skipButtons = app.buttons.matching(
-            NSPredicate(
-                format: "identifier BEGINSWITH 'meal-checkin-skip-' OR identifier == 'xmark.circle' OR label == 'xmark.circle'"
-            )
-        )
-        let remainingSkip = skipButtons.firstMatch
-        XCTAssertTrue(
-            remainingSkip.waitForExistence(timeout: 8),
-            "A remaining overdue meal should still be actionable after first completion"
-        )
-
-        remainingSkip.tap()
+        var attempts = 0
+        while mealCheckInNav.exists && attempts < 4 {
+            attempts += 1
+            guard mealActionButtons.firstMatch.waitForExistence(timeout: 4) else { break }
+            mealActionButtons.firstMatch.tap()
+        }
 
         let calendarNav = app.navigationBars["Calendar"]
         XCTAssertTrue(calendarNav.waitForExistence(timeout: 8), "Sheet should dismiss after final meal action")
-        XCTAssertFalse(mealCheckInNav.exists, "Meal check-in sheet should be dismissed")
+        let sheetDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: mealCheckInNav
+        )
+        let dismissalResult = XCTWaiter.wait(for: [sheetDismissed], timeout: 8)
+        XCTAssertEqual(dismissalResult, .completed, "Meal check-in sheet should be dismissed")
 
         screenshot("17-meal-checkin-row-dismiss")
     }

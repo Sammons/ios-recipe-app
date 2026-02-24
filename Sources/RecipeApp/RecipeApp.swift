@@ -35,11 +35,10 @@ struct RecipeApp: App {
         }
 
         let context = sharedContainer.mainContext
-        if AppFlags.shouldSeed {
-            SeedData.seedIfEmpty(context: context)
-        }
         if AppFlags.shouldSeedOverdueMeals {
             SeedData.seedOverdueMealCheckinScenario(context: context)
+        } else if AppFlags.shouldSeed {
+            SeedData.seedIfEmpty(context: context)
         }
         if AppFlags.shouldSeed || AppFlags.shouldSeedOverdueMeals {
             IngredientCatalogSeeder.seedMissing(context: context)
@@ -50,8 +49,11 @@ struct RecipeApp: App {
         WindowGroup {
             ContentView()
                 .sheet(
-                    isPresented: $showMealCompletion,
-                    onDismiss: { overdueEntries = [] }
+                    isPresented: mealCompletionPresentationBinding,
+                    onDismiss: {
+                        overdueEntries = []
+                        showMealCompletion = false
+                    }
                 ) {
                     MealCompletionSheet(
                         overdueEntries: overdueEntries,
@@ -68,6 +70,18 @@ struct RecipeApp: App {
                 checkOverdueMeals()
             }
         }
+    }
+
+    private var mealCompletionPresentationBinding: Binding<Bool> {
+        Binding(
+            get: { showMealCompletion && !overdueEntries.isEmpty },
+            set: { newValue in
+                showMealCompletion = newValue
+                if !newValue {
+                    overdueEntries = []
+                }
+            }
+        )
     }
 
     @MainActor
