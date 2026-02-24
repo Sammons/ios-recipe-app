@@ -226,8 +226,6 @@ struct PantryCoverageService {
         }
 
         var coveredIngredients = 0
-        var requirements: [(InventoryKey, Double)] = []
-        requirements.reserveCapacity(totalIngredients)
 
         for recipeIngredient in ingredients {
             guard let ingredient = recipeIngredient.ingredient else { continue }
@@ -236,20 +234,15 @@ struct PantryCoverageService {
                 ingredientName: ingredient.name,
                 unit: UnitTextNormalizer.normalize(recipeIngredient.unit)
             )
-            requirements.append((key, required))
 
             let available = inventoryByKey[key, default: 0]
             if available >= required {
                 coveredIngredients += 1
+                inventoryByKey[key] = max(0, available - required)
             }
         }
 
         let level = coverageLevel(covered: coveredIngredients, total: totalIngredients)
-        if level == .full {
-            for (key, required) in requirements {
-                inventoryByKey[key, default: 0] = max(0, inventoryByKey[key, default: 0] - required)
-            }
-        }
 
         return PantryMealCoverage(
             coveredIngredients: coveredIngredients,

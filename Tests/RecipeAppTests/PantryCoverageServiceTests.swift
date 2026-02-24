@@ -147,4 +147,51 @@ struct PantryCoverageServiceTests {
         #expect(forecast[dayTwo]?.readyMeals == 0)
         #expect(forecast[dayTwo]?.level == .missing)
     }
+
+    @Test @MainActor func forecastDayCoverageReservesSharedIngredientsFromEarlierPartialMeals() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let trout = Ingredient(name: "trout")
+        let lemon = Ingredient(name: "lemon")
+        context.insert(trout)
+        context.insert(lemon)
+        context.insert(InventoryItem(quantity: 2, unit: "filets", ingredient: trout))
+
+        let lemonTrout = Recipe(title: "Lemon Trout", servings: 1)
+        let plainTrout = Recipe(title: "Plain Trout", servings: 1)
+        context.insert(lemonTrout)
+        context.insert(plainTrout)
+
+        context.insert(RecipeIngredient(quantity: 2, unit: "filet", recipe: lemonTrout, ingredient: trout))
+        context.insert(RecipeIngredient(quantity: 1, unit: "whole", recipe: lemonTrout, ingredient: lemon))
+        context.insert(RecipeIngredient(quantity: 2, unit: "filet", recipe: plainTrout, ingredient: trout))
+
+        let dayOne = DateHelpers.startOfDay(Date())
+        let dayTwo = DateHelpers.addDays(2, to: dayOne)
+        let firstEntry = MealPlanEntry(
+            date: dayOne,
+            mealSlot: MealSlot.dinner,
+            servings: 1,
+            recipe: lemonTrout
+        )
+        let secondEntry = MealPlanEntry(
+            date: dayTwo,
+            mealSlot: MealSlot.dinner,
+            servings: 1,
+            recipe: plainTrout
+        )
+        context.insert(firstEntry)
+        context.insert(secondEntry)
+
+        let forecast = PantryCoverageService.forecastDayCoverage(
+            for: [dayOne, dayTwo],
+            entries: [firstEntry, secondEntry]
+        )
+
+        #expect(forecast[dayOne]?.readyMeals == 0)
+        #expect(forecast[dayOne]?.level == .partial)
+        #expect(forecast[dayTwo]?.readyMeals == 0)
+        #expect(forecast[dayTwo]?.level == .missing)
+    }
 }

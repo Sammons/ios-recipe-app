@@ -4,12 +4,16 @@ import SwiftUI
 struct MealCompletionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    let overdueEntries: [MealPlanEntry]
+    @State private var pendingEntries: [MealPlanEntry]
+
+    init(overdueEntries: [MealPlanEntry]) {
+        _pendingEntries = State(initialValue: overdueEntries)
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                if overdueEntries.isEmpty {
+                if pendingEntries.isEmpty {
                     ContentUnavailableView(
                         "No overdue meals",
                         systemImage: "checkmark.circle",
@@ -22,7 +26,7 @@ struct MealCompletionSheet: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    ForEach(overdueEntries) { entry in
+                    ForEach(pendingEntries) { entry in
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(entry.recipe?.title ?? "Unknown")
@@ -36,6 +40,7 @@ struct MealCompletionSheet: View {
 
                             Button {
                                 MealCompletionService.markCompleted(entry, context: modelContext)
+                                removeEntry(entry)
                             } label: {
                                 Image(systemName: "checkmark.circle")
                                     .font(.title2)
@@ -44,7 +49,8 @@ struct MealCompletionSheet: View {
                             .buttonStyle(.plain)
 
                             Button {
-                                MealCompletionService.markSkipped(entry)
+                                MealCompletionService.markSkipped(entry, context: modelContext)
+                                removeEntry(entry)
                             } label: {
                                 Image(systemName: "xmark.circle")
                                     .font(.title2)
@@ -62,6 +68,16 @@ struct MealCompletionSheet: View {
             .toolbar {
                 Button("Done") { dismiss() }
             }
+        }
+    }
+
+    private func removeEntry(_ entry: MealPlanEntry) {
+        pendingEntries.removeAll { candidate in
+            ObjectIdentifier(candidate) == ObjectIdentifier(entry)
+        }
+
+        if pendingEntries.isEmpty {
+            dismiss()
         }
     }
 }

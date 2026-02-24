@@ -22,11 +22,15 @@ struct MealCompletionService {
         entry.status = MealStatus.completed
         entry.completedAt = Date()
         deductIngredients(entry: entry, context: context)
+        try? context.save()
     }
 
-    static func markSkipped(_ entry: MealPlanEntry) {
+    static func markSkipped(_ entry: MealPlanEntry, context: ModelContext? = nil) {
         entry.status = MealStatus.skipped
         entry.completedAt = Date()
+        if let context {
+            try? context.save()
+        }
     }
 
     private static func deductIngredients(entry: MealPlanEntry, context: ModelContext) {
