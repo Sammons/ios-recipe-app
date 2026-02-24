@@ -185,6 +185,7 @@ struct SeedData {
                 recipeType: type,
                 instructions: steps
             )
+            applyEstimatedNutrition(to: recipe)
             context.insert(recipe)
 
             var recipeIngredients: [RecipeIngredient] = []
@@ -212,6 +213,36 @@ struct SeedData {
             context.insert(UserPreferences())
         }
 
+        try? context.save()
+    }
+
+    static func seedOverdueMealCheckinScenario(context: ModelContext) {
+        let existingDescriptor = FetchDescriptor<MealPlanEntry>()
+        let existingCount = (try? context.fetchCount(existingDescriptor)) ?? 0
+        guard existingCount == 0 else { return }
+
+        seedIfEmpty(context: context)
+
+        let recipeDescriptor = FetchDescriptor<Recipe>(sortBy: [SortDescriptor(\Recipe.title)])
+        guard let recipes = try? context.fetch(recipeDescriptor), recipes.count >= 2 else { return }
+
+        let start = DateHelpers.startOfDay(Date())
+        let yesterday = DateHelpers.addDays(-1, to: start)
+
+        let first = MealPlanEntry(
+            date: yesterday,
+            mealSlot: MealSlot.breakfast,
+            servings: 1,
+            recipe: recipes[0]
+        )
+        let second = MealPlanEntry(
+            date: yesterday,
+            mealSlot: MealSlot.dinner,
+            servings: 1,
+            recipe: recipes[1]
+        )
+        context.insert(first)
+        context.insert(second)
         try? context.save()
     }
 
@@ -276,5 +307,83 @@ struct SeedData {
         let ingredient = Ingredient(name: name)
         context.insert(ingredient)
         return ingredient
+    }
+
+    private static func applyEstimatedNutrition(to recipe: Recipe) {
+        switch recipe.title {
+        case "Spaghetti Carbonara":
+            recipe.caloriesPerServing = 720
+            recipe.proteinGramsPerServing = 29
+            recipe.carbsGramsPerServing = 66
+            recipe.fatGramsPerServing = 36
+            recipe.sodiumMgPerServing = 980
+            recipe.allergenInfo = "Egg, Milk, Wheat"
+        case "Chicken Tikka Masala":
+            recipe.caloriesPerServing = 560
+            recipe.proteinGramsPerServing = 39
+            recipe.carbsGramsPerServing = 22
+            recipe.fatGramsPerServing = 33
+            recipe.sodiumMgPerServing = 760
+            recipe.allergenInfo = "Milk"
+        case "Greek Salad":
+            recipe.caloriesPerServing = 310
+            recipe.proteinGramsPerServing = 9
+            recipe.carbsGramsPerServing = 12
+            recipe.fatGramsPerServing = 23
+            recipe.fiberGramsPerServing = 4
+            recipe.sodiumMgPerServing = 610
+            recipe.allergenInfo = "Milk"
+        case "Banana Pancakes":
+            recipe.caloriesPerServing = 280
+            recipe.proteinGramsPerServing = 9
+            recipe.carbsGramsPerServing = 44
+            recipe.fatGramsPerServing = 8
+            recipe.sugarGramsPerServing = 12
+            recipe.sodiumMgPerServing = 330
+            recipe.allergenInfo = "Egg, Milk, Wheat"
+        case "Vegetable Stir Fry":
+            recipe.caloriesPerServing = 390
+            recipe.proteinGramsPerServing = 8
+            recipe.carbsGramsPerServing = 61
+            recipe.fatGramsPerServing = 13
+            recipe.fiberGramsPerServing = 8
+            recipe.sodiumMgPerServing = 740
+            recipe.allergenInfo = "Soy"
+        case "Avocado Toast":
+            recipe.caloriesPerServing = 260
+            recipe.proteinGramsPerServing = 6
+            recipe.carbsGramsPerServing = 24
+            recipe.fatGramsPerServing = 16
+            recipe.fiberGramsPerServing = 7
+            recipe.sodiumMgPerServing = 290
+            recipe.allergenInfo = "Wheat"
+        case "Chocolate Chip Cookies":
+            recipe.caloriesPerServing = 190
+            recipe.proteinGramsPerServing = 2
+            recipe.carbsGramsPerServing = 26
+            recipe.fatGramsPerServing = 9
+            recipe.sugarGramsPerServing = 16
+            recipe.sodiumMgPerServing = 120
+            recipe.allergenInfo = "Egg, Milk, Wheat"
+        case "Hummus Wrap":
+            recipe.caloriesPerServing = 340
+            recipe.proteinGramsPerServing = 11
+            recipe.carbsGramsPerServing = 36
+            recipe.fatGramsPerServing = 17
+            recipe.fiberGramsPerServing = 8
+            recipe.sodiumMgPerServing = 640
+            recipe.allergenInfo = "Sesame, Wheat"
+        case "Trail Mix Energy Bites":
+            recipe.caloriesPerServing = 145
+            recipe.proteinGramsPerServing = 4
+            recipe.carbsGramsPerServing = 14
+            recipe.fatGramsPerServing = 8
+            recipe.fiberGramsPerServing = 2
+            recipe.sugarGramsPerServing = 9
+            recipe.sodiumMgPerServing = 35
+            recipe.allergenInfo = "Peanut"
+        default:
+            break
+        }
     }
 }

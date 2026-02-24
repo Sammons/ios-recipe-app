@@ -120,6 +120,9 @@ struct RecipeRowView: View {
                 if recipe.servings > 0 {
                     Label("\(recipe.servings)", systemImage: "person.2")
                 }
+                if recipe.caloriesPerServing > 0 {
+                    Label("\(recipe.caloriesPerServing) cal", systemImage: "bolt.heart")
+                }
             }
             .font(.caption)
             .foregroundStyle(.secondary)

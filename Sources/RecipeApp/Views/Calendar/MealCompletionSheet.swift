@@ -4,17 +4,24 @@ import SwiftUI
 struct MealCompletionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    let overdueEntries: [MealPlanEntry]
+    @State private var pendingEntries: [MealPlanEntry]
+    var onFinished: (() -> Void)?
+
+    init(overdueEntries: [MealPlanEntry], onFinished: (() -> Void)? = nil) {
+        _pendingEntries = State(initialValue: overdueEntries)
+        self.onFinished = onFinished
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                if overdueEntries.isEmpty {
+                if pendingEntries.isEmpty {
                     ContentUnavailableView(
                         "No overdue meals",
                         systemImage: "checkmark.circle",
                         description: Text("You're all caught up.")
                     )
+                    .accessibilityIdentifier("meal-checkin-empty")
                 } else {
                     Section {
                         Text("You have meals that haven't been marked. Did you make them?")
@@ -22,7 +29,7 @@ struct MealCompletionSheet: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    ForEach(overdueEntries) { entry in
+                    ForEach(Array(pendingEntries.enumerated()), id: \.offset) { index, entry in
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(entry.recipe?.title ?? "Unknown")
@@ -36,21 +43,27 @@ struct MealCompletionSheet: View {
 
                             Button {
                                 MealCompletionService.markCompleted(entry, context: modelContext)
+                                removeEntry(entry)
                             } label: {
-                                Image(systemName: "checkmark.circle")
-                                    .font(.title2)
+                                Label("Made", systemImage: "checkmark.circle.fill")
+                                    .font(.callout.weight(.semibold))
                                     .foregroundStyle(.green)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("meal-checkin-complete-\(index)")
+                            .accessibilityLabel("Mark meal completed")
 
                             Button {
-                                MealCompletionService.markSkipped(entry)
+                                MealCompletionService.markSkipped(entry, context: modelContext)
+                                removeEntry(entry)
                             } label: {
-                                Image(systemName: "xmark.circle")
-                                    .font(.title2)
+                                Label("Skipped", systemImage: "xmark.circle.fill")
+                                    .font(.callout.weight(.semibold))
                                     .foregroundStyle(.orange)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("meal-checkin-skip-\(index)")
+                            .accessibilityLabel("Mark meal skipped")
                         }
                     }
                 }
@@ -61,6 +74,20 @@ struct MealCompletionSheet: View {
             #endif
             .toolbar {
                 Button("Done") { dismiss() }
+                    .accessibilityIdentifier("meal-checkin-done")
+            }
+        }
+    }
+
+    private func removeEntry(_ entry: MealPlanEntry) {
+        pendingEntries.removeAll { candidate in
+            candidate.persistentModelID == entry.persistentModelID
+        }
+
+        if pendingEntries.isEmpty {
+            DispatchQueue.main.async {
+                onFinished?()
+                dismiss()
             }
         }
     }

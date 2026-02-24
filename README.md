@@ -45,6 +45,7 @@ xtool dev
 
 ```bash
 # Runs build-for-testing + functional flow tests + unit tests + retried UI regression tests
+# and enforces UX evidence gates (required regression screenshots/tests)
 ./ci/run-stable-tests.sh
 ```
 

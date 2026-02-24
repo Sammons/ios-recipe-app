@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MonthView: View {
     @Binding var selectedDate: Date
+    var onOpenDay: ((Date) -> Void)?
     @Query private var allEntries: [MealPlanEntry]
 
     private var monthStart: Date { DateHelpers.startOfMonth(selectedDate) }
@@ -19,8 +20,13 @@ struct MonthView: View {
         return allEntries.filter { $0.date >= start && $0.date < end }
     }
 
+    private var forecastCoverageByDay: [Date: PantryDayCoverage] {
+        PantryCoverageService.forecastDayCoverage(for: daysInMonth, entries: allEntries)
+    }
+
     private func coverage(for date: Date) -> PantryDayCoverage {
-        PantryCoverageService.dayCoverage(for: entries(for: date))
+        let dayKey = DateHelpers.startOfDay(date)
+        return forecastCoverageByDay[dayKey] ?? PantryCoverageService.dayCoverage(for: entries(for: date))
     }
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
@@ -55,6 +61,12 @@ struct MonthView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .simultaneousGesture(
+                        TapGesture(count: 2).onEnded {
+                            onOpenDay?(date)
+                        }
+                    )
+                    .accessibilityIdentifier("month-day-\(DateHelpers.dayNumber(date))")
                 }
             }
             .padding(.horizontal, 4)

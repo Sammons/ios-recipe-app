@@ -1,0 +1,16 @@
+{
+  "required_tests": [
+    "testShoppingListShowsVisibleGenerateButton",
+    "testWeekViewRowCanBeTappedAcrossFullWidth",
+    "testWeekViewDoubleTapOpensDayView",
+    "testRecipeBuilderKeyboardHasDoneAction",
+    "testRecipeDetailShowsNutritionAllergensAndIngredientCategories"
+  ],
+  "required_screenshots": [
+    "09-shopping-generate-visible.png",
+    "10-week-row-full-hit-target.png",
+    "11-recipe-builder-keyboard-done.png",
+    "15-week-doubletap-day.png",
+    "18-recipe-nutrition-allergens-categories.png"
+  ]
+}

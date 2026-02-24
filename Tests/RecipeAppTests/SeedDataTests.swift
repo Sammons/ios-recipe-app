@@ -1,5 +1,6 @@
 import Testing
 import SwiftData
+import Foundation
 @testable import RecipeApp
 
 @Suite("SeedData", .serialized)
@@ -73,6 +74,41 @@ struct SeedDataTests {
                 recipe.recipeIngredients.count > 0,
                 "Recipe '\(recipe.title)' has no ingredients"
             )
+        }
+    }
+
+    @Test @MainActor func seededRecipesIncludeNutritionAndAllergenMetadata() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+        SeedData.seedIfEmpty(context: context)
+
+        let recipes = try context.fetch(FetchDescriptor<Recipe>())
+        for recipe in recipes {
+            #expect(
+                recipe.caloriesPerServing > 0,
+                "Recipe '\(recipe.title)' should include calorie estimates"
+            )
+            #expect(
+                !recipe.allergens.isEmpty,
+                "Recipe '\(recipe.title)' should include allergen metadata"
+            )
+        }
+    }
+
+    @Test @MainActor func overdueMealCheckinScenarioSeedsTwoPlannedPastMeals() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        SeedData.seedOverdueMealCheckinScenario(context: context)
+
+        let entries = try context.fetch(FetchDescriptor<MealPlanEntry>())
+        #expect(entries.count == 2)
+
+        let startOfToday = DateHelpers.startOfDay(Date())
+        for entry in entries {
+            #expect(entry.status == MealStatus.planned)
+            #expect(entry.date < startOfToday)
+            #expect(entry.recipe != nil)
         }
     }
 }

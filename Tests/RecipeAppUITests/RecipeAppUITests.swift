@@ -357,4 +357,105 @@ final class RecipeAppUITests: XCTestCase {
 
         screenshot("14-shopping-autocomplete-alias")
     }
+
+    func testWeekViewDoubleTapOpensDayView() {
+        app.launch()
+
+        let weekSegment = app.buttons["Week"]
+        XCTAssertTrue(weekSegment.waitForExistence(timeout: 5))
+        weekSegment.tap()
+
+        let weekRow = (0..<7).lazy
+            .map { self.app.buttons["week-day-row-\($0)"] }
+            .first { $0.waitForExistence(timeout: 4) }
+
+        guard let row = weekRow else {
+            XCTFail("At least one week day row should be hittable")
+            return
+        }
+
+        row.doubleTap()
+
+        let addBreakfast = app.buttons["Add Breakfast"]
+        XCTAssertTrue(addBreakfast.waitForExistence(timeout: 8), "Double tap should drill into day view")
+
+        screenshot("15-week-doubletap-day")
+    }
+
+    func testRecipePickerShowsAddRecipeShortcut() {
+        app.launch()
+
+        let addBreakfast = app.buttons["Add Breakfast"]
+        XCTAssertTrue(addBreakfast.waitForExistence(timeout: 5))
+        addBreakfast.tap()
+
+        let addRecipeShortcut = app.buttons["picker-add-recipe"]
+        XCTAssertTrue(addRecipeShortcut.waitForExistence(timeout: 5), "Recipe picker should expose in-context add shortcut")
+
+        screenshot("16-recipe-picker-add-shortcut")
+    }
+
+    func testMealCompletionSheetActionsRemoveRowsAndDismiss() {
+        app.launchArguments = [
+            "UITEST",
+            "UITEST_INMEMORY",
+            "UITEST_SEED",
+            "UITEST_SEED_OVERDUE_MEALS",
+            "UITEST_ENABLE_MEAL_PROMPT",
+        ]
+        app.launch()
+
+        let mealCheckInNav = app.navigationBars["Meal Check-in"]
+        XCTAssertTrue(mealCheckInNav.waitForExistence(timeout: 8), "Meal check-in sheet should appear")
+
+        let completeButtons = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH 'meal-checkin-complete-' OR identifier == 'checkmark.circle' OR label == 'checkmark.circle'"
+            )
+        )
+        let completeFirst = completeButtons.firstMatch
+        XCTAssertTrue(completeFirst.waitForExistence(timeout: 12), "First overdue meal action should exist")
+        completeFirst.tap()
+
+        let skipButtons = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH 'meal-checkin-skip-' OR identifier == 'xmark.circle' OR label == 'xmark.circle'"
+            )
+        )
+        let remainingSkip = skipButtons.firstMatch
+        XCTAssertTrue(
+            remainingSkip.waitForExistence(timeout: 8),
+            "A remaining overdue meal should still be actionable after first completion"
+        )
+
+        remainingSkip.tap()
+
+        let calendarNav = app.navigationBars["Calendar"]
+        XCTAssertTrue(calendarNav.waitForExistence(timeout: 8), "Sheet should dismiss after final meal action")
+        XCTAssertFalse(mealCheckInNav.exists, "Meal check-in sheet should be dismissed")
+
+        screenshot("17-meal-checkin-row-dismiss")
+    }
+
+    func testRecipeDetailShowsNutritionAllergensAndIngredientCategories() {
+        app.launch()
+
+        tapTab("Recipes")
+
+        let avocadoToast = app.staticTexts["Avocado Toast"]
+        XCTAssertTrue(avocadoToast.waitForExistence(timeout: 5))
+        avocadoToast.tap()
+
+        let caloriesRow = app.descendants(matching: .any)["recipe-nutrition-calories"]
+        XCTAssertTrue(caloriesRow.waitForExistence(timeout: 8), "Recipe detail should show nutrition rows")
+
+        let allergenChip = app.descendants(matching: .any)["recipe-allergen-chip"]
+        XCTAssertTrue(allergenChip.waitForExistence(timeout: 5), "Recipe detail should show allergen chips")
+
+        app.swipeUp()
+        let categoryBadge = app.descendants(matching: .any)["ingredient-category-badge"]
+        XCTAssertTrue(categoryBadge.waitForExistence(timeout: 8), "Ingredient rows should show category badges")
+
+        screenshot("18-recipe-nutrition-allergens-categories")
+    }
 }
