@@ -94,6 +94,13 @@ struct RecipeEditorPane: View {
     @State private var cookTimeMinutes = 0
     @State private var servings = 1
     @State private var caloriesPerServing = 0
+    @State private var proteinGramsPerServing = 0
+    @State private var carbsGramsPerServing = 0
+    @State private var fatGramsPerServing = 0
+    @State private var fiberGramsPerServing = 0
+    @State private var sugarGramsPerServing = 0
+    @State private var sodiumMgPerServing = 0
+    @State private var allergenInfo = ""
     @State private var ingredientRows: [IngredientRowData] = []
     @State private var instructions: [String] = [""]
 
@@ -114,12 +121,23 @@ struct RecipeEditorPane: View {
                 Stepper("Prep: \(prepTimeMinutes) min", value: $prepTimeMinutes, in: 0...480, step: 5)
                 Stepper("Cook: \(cookTimeMinutes) min", value: $cookTimeMinutes, in: 0...480, step: 5)
                 Stepper("Servings: \(servings)", value: $servings, in: 1...50)
+            }
+
+            Section("Nutrition & Allergens") {
                 Stepper(
                     "Calories/serving: \(caloriesPerServing == 0 ? "Unknown" : "\(caloriesPerServing)")",
                     value: $caloriesPerServing,
                     in: 0...5000,
                     step: 10
                 )
+                Stepper("Protein: \(proteinGramsPerServing)g", value: $proteinGramsPerServing, in: 0...500)
+                Stepper("Carbs: \(carbsGramsPerServing)g", value: $carbsGramsPerServing, in: 0...500)
+                Stepper("Fat: \(fatGramsPerServing)g", value: $fatGramsPerServing, in: 0...500)
+                Stepper("Fiber: \(fiberGramsPerServing)g", value: $fiberGramsPerServing, in: 0...200)
+                Stepper("Sugar: \(sugarGramsPerServing)g", value: $sugarGramsPerServing, in: 0...300)
+                Stepper("Sodium: \(sodiumMgPerServing)mg", value: $sodiumMgPerServing, in: 0...10000, step: 25)
+                TextField("Allergens (comma-separated)", text: $allergenInfo, axis: .vertical)
+                    .lineLimit(1...3)
             }
 
             Section("Ingredients") {
@@ -171,13 +189,20 @@ struct RecipeEditorPane: View {
             cookTimeMinutes: cookTimeMinutes,
             servings: servings,
             caloriesPerServing: caloriesPerServing,
+            proteinGramsPerServing: proteinGramsPerServing,
+            carbsGramsPerServing: carbsGramsPerServing,
+            fatGramsPerServing: fatGramsPerServing,
+            fiberGramsPerServing: fiberGramsPerServing,
+            sugarGramsPerServing: sugarGramsPerServing,
+            sodiumMgPerServing: sodiumMgPerServing,
+            allergenInfo: allergenInfo,
             recipeType: recipeType,
             instructions: instructions.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         )
         modelContext.insert(recipe)
 
         for row in ingredientRows where !row.name.trimmingCharacters(in: .whitespaces).isEmpty {
-            let ingredient = row.existingIngredient ?? findOrCreateIngredient(name: row.name)
+            let ingredient = row.existingIngredient ?? findOrCreateIngredient(name: row.name, category: row.category)
             let ri = RecipeIngredient(
                 quantity: row.quantity,
                 unit: row.unit,
@@ -192,15 +217,18 @@ struct RecipeEditorPane: View {
         resetForm()
     }
 
-    private func findOrCreateIngredient(name: String) -> Ingredient {
+    private func findOrCreateIngredient(name: String, category: String) -> Ingredient {
         let lowered = name.lowercased()
         let descriptor = FetchDescriptor<Ingredient>(
             predicate: #Predicate { $0.name == lowered }
         )
         if let existing = try? modelContext.fetch(descriptor).first {
+            if existing.category == IngredientCategory.other && category != IngredientCategory.other {
+                existing.category = category
+            }
             return existing
         }
-        let ingredient = Ingredient(name: name)
+        let ingredient = Ingredient(name: name, category: category)
         modelContext.insert(ingredient)
         return ingredient
     }
@@ -213,6 +241,13 @@ struct RecipeEditorPane: View {
         cookTimeMinutes = 0
         servings = 1
         caloriesPerServing = 0
+        proteinGramsPerServing = 0
+        carbsGramsPerServing = 0
+        fatGramsPerServing = 0
+        fiberGramsPerServing = 0
+        sugarGramsPerServing = 0
+        sodiumMgPerServing = 0
+        allergenInfo = ""
         ingredientRows = []
         instructions = [""]
     }

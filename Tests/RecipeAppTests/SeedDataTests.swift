@@ -75,4 +75,22 @@ struct SeedDataTests {
             )
         }
     }
+
+    @Test @MainActor func seededRecipesIncludeNutritionAndAllergenMetadata() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+        SeedData.seedIfEmpty(context: context)
+
+        let recipes = try context.fetch(FetchDescriptor<Recipe>())
+        for recipe in recipes {
+            #expect(
+                recipe.caloriesPerServing > 0,
+                "Recipe '\(recipe.title)' should include calorie estimates"
+            )
+            #expect(
+                !recipe.allergens.isEmpty,
+                "Recipe '\(recipe.title)' should include allergen metadata"
+            )
+        }
+    }
 }

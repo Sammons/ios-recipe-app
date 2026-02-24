@@ -45,11 +45,56 @@ struct RecipeDetailView: View {
                 }
             }
 
+            if hasNutritionDetails(recipe) {
+                Section("Nutrition (per serving)") {
+                    if recipe.caloriesPerServing > 0 {
+                        nutritionRow(label: "Calories", value: "\(recipe.caloriesPerServing) cal")
+                    }
+                    if recipe.proteinGramsPerServing > 0 {
+                        nutritionRow(label: "Protein", value: "\(recipe.proteinGramsPerServing) g")
+                    }
+                    if recipe.carbsGramsPerServing > 0 {
+                        nutritionRow(label: "Carbs", value: "\(recipe.carbsGramsPerServing) g")
+                    }
+                    if recipe.fatGramsPerServing > 0 {
+                        nutritionRow(label: "Fat", value: "\(recipe.fatGramsPerServing) g")
+                    }
+                    if recipe.fiberGramsPerServing > 0 {
+                        nutritionRow(label: "Fiber", value: "\(recipe.fiberGramsPerServing) g")
+                    }
+                    if recipe.sugarGramsPerServing > 0 {
+                        nutritionRow(label: "Sugar", value: "\(recipe.sugarGramsPerServing) g")
+                    }
+                    if recipe.sodiumMgPerServing > 0 {
+                        nutritionRow(label: "Sodium", value: "\(recipe.sodiumMgPerServing) mg")
+                    }
+                }
+            }
+
+            if !recipe.allergens.isEmpty {
+                Section("Allergens") {
+                    ForEach(recipe.allergens, id: \.self) { allergen in
+                        Text(allergen)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.orange.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+
             if !recipe.recipeIngredients.isEmpty {
                 Section("Ingredients") {
                     ForEach(recipe.recipeIngredients) { ri in
                         HStack {
-                            Text(ri.ingredient?.displayName ?? "Unknown")
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(ri.ingredient?.displayName ?? "Unknown")
+                                if let category = ri.ingredient?.category {
+                                    IngredientCategoryBadge(category: category)
+                                }
+                            }
                             Spacer()
                             Text(ri.formattedQuantity)
                                 .foregroundStyle(.secondary)
@@ -79,6 +124,25 @@ struct RecipeDetailView: View {
             Color.clear.frame(height: 8)
         }
     }
+
+    private func nutritionRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(value)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func hasNutritionDetails(_ recipe: Recipe) -> Bool {
+        recipe.caloriesPerServing > 0
+            || recipe.proteinGramsPerServing > 0
+            || recipe.carbsGramsPerServing > 0
+            || recipe.fatGramsPerServing > 0
+            || recipe.fiberGramsPerServing > 0
+            || recipe.sugarGramsPerServing > 0
+            || recipe.sodiumMgPerServing > 0
+    }
 }
 
 struct InfoBadge: View {
@@ -95,6 +159,37 @@ struct InfoBadge: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+private struct IngredientCategoryBadge: View {
+    let category: String
+
+    var body: some View {
+        Text(category)
+            .font(.caption2)
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.15))
+            .clipShape(Capsule())
+    }
+
+    private var color: Color {
+        switch category {
+        case IngredientCategory.protein:
+            return .red
+        case IngredientCategory.vegetable:
+            return .green
+        case IngredientCategory.dairy:
+            return .blue
+        case IngredientCategory.grain:
+            return .brown
+        case IngredientCategory.spice:
+            return .orange
+        default:
+            return .gray
+        }
     }
 }
 
