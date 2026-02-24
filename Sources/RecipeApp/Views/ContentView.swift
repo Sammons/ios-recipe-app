@@ -60,11 +60,10 @@ struct ContentView: View {
         mainTabView
         .onAppear {
             if !didSeed {
-                if AppFlags.shouldSeed {
-                    SeedData.seedIfEmpty(context: modelContext)
-                }
                 if AppFlags.shouldSeedOverdueMeals {
                     SeedData.seedOverdueMealCheckinScenario(context: modelContext)
+                } else if AppFlags.shouldSeed {
+                    SeedData.seedIfEmpty(context: modelContext)
                 }
                 IngredientCatalogSeeder.seedMissing(context: modelContext)
                 didSeed = true

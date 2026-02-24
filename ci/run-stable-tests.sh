@@ -19,6 +19,7 @@ run_regression_ui_tests() {
     -only-testing:RecipeAppUITests/RecipeAppUITests/testWeekViewRowCanBeTappedAcrossFullWidth \
     -only-testing:RecipeAppUITests/RecipeAppUITests/testWeekViewDoubleTapOpensDayView \
     -only-testing:RecipeAppUITests/RecipeAppUITests/testRecipeBuilderKeyboardHasDoneAction \
+    -only-testing:RecipeAppUITests/RecipeAppUITests/testMealCompletionSheetActionsRemoveRowsAndDismiss \
     -only-testing:RecipeAppUITests/RecipeAppUITests/testRecipeDetailShowsNutritionAllergensAndIngredientCategories \
     -resultBundlePath "$RESULT_BUNDLE" \
     -quiet

@@ -4,6 +4,7 @@
     "testWeekViewRowCanBeTappedAcrossFullWidth",
     "testWeekViewDoubleTapOpensDayView",
     "testRecipeBuilderKeyboardHasDoneAction",
+    "testMealCompletionSheetActionsRemoveRowsAndDismiss",
     "testRecipeDetailShowsNutritionAllergensAndIngredientCategories"
   ],
   "required_screenshots": [
@@ -11,6 +12,7 @@
     "10-week-row-full-hit-target.png",
     "11-recipe-builder-keyboard-done.png",
     "15-week-doubletap-day.png",
+    "17-meal-checkin-row-dismiss.png",
     "18-recipe-nutrition-allergens-categories.png"
   ]
 }

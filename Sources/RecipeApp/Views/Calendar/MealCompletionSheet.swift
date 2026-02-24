@@ -29,7 +29,7 @@ struct MealCompletionSheet: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    ForEach(Array(pendingEntries.enumerated()), id: \.offset) { index, entry in
+                    ForEach(pendingEntries, id: \.persistentModelID) { entry in
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(entry.recipe?.title ?? "Unknown")
@@ -49,8 +49,8 @@ struct MealCompletionSheet: View {
                                     .font(.callout.weight(.semibold))
                                     .foregroundStyle(.green)
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("meal-checkin-complete-\(index)")
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("meal-checkin-complete")
                             .accessibilityLabel("Mark meal completed")
 
                             Button {
@@ -61,8 +61,8 @@ struct MealCompletionSheet: View {
                                     .font(.callout.weight(.semibold))
                                     .foregroundStyle(.orange)
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("meal-checkin-skip-\(index)")
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("meal-checkin-skip")
                             .accessibilityLabel("Mark meal skipped")
                         }
                     }
@@ -85,10 +85,7 @@ struct MealCompletionSheet: View {
         }
 
         if pendingEntries.isEmpty {
-            DispatchQueue.main.async {
-                onFinished?()
-                dismiss()
-            }
+            onFinished?()
         }
     }
 }
