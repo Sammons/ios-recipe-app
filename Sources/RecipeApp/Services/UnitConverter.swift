@@ -178,20 +178,55 @@ struct UnitConverter {
     }
 
     /// Convert a quantity from one unit to another.
-    /// Returns nil if the units are from different dimensions or not recognized.
-    static func convert(quantity: Double, from: String, to: String) -> Double? {
-        guard areCompatible(from, to) else { return nil }
-        guard let base = toBaseUnit(quantity: quantity, unit: from) else { return nil }
-        return fromBaseUnit(baseQuantity: base, toUnit: to)
+    ///
+    /// Same-dimension conversions (e.g. tbsp → cup, g → kg) always work.
+    /// Cross-dimension conversions (volume ↔ weight) require a non-nil `density` (g/ml).
+    /// Returns nil when conversion is not possible.
+    static func convert(
+        quantity: Double, from: String, to: String,
+        density: Double? = nil
+    ) -> Double? {
+        let fromDim = dimension(of: from)
+        let toDim = dimension(of: to)
+
+        if fromDim == toDim {
+            // Same dimension — use the standard base-unit path.
+            guard let base = toBaseUnit(quantity: quantity, unit: from) else { return nil }
+            return fromBaseUnit(baseQuantity: base, toUnit: to)
+        }
+
+        // Cross-dimension requires density.
+        guard let d = density else { return nil }
+
+        // Volume → Weight: tsp → ml → g → target weight unit.
+        // 1 tsp = 4.92892 ml (matches volumeFactors["ml"] = 1/4.92892).
+        if fromDim == .volume && toDim == .weight {
+            guard let tspBase = toBaseUnit(quantity: quantity, unit: from) else { return nil }
+            let grams = tspBase * 4.92892 * d
+            return fromBaseUnit(baseQuantity: grams, toUnit: to)
+        }
+
+        // Weight → Volume: g → ml → tsp → target volume unit.
+        if fromDim == .weight && toDim == .volume {
+            guard let gBase = toBaseUnit(quantity: quantity, unit: from) else { return nil }
+            let tsp = (gBase / d) / 4.92892
+            return fromBaseUnit(baseQuantity: tsp, toUnit: to)
+        }
+
+        return nil
     }
 
-    /// Returns true if two units can be converted between (same measurable dimension).
-    /// Count and other units are NOT compatible with each other or with volume/weight.
-    static func areCompatible(_ u1: String, _ u2: String) -> Bool {
+    /// Returns true if two units can be converted between each other.
+    ///
+    /// Same-dimension pairs (volume↔volume, weight↔weight) are always compatible.
+    /// Cross-dimension pairs (volume↔weight) are compatible only when `density` is non-nil.
+    /// Count and other units are never compatible with each other or with volume/weight.
+    static func areCompatible(_ u1: String, _ u2: String, density: Double? = nil) -> Bool {
         let d1 = dimension(of: u1)
         let d2 = dimension(of: u2)
-        guard d1 == d2 else { return false }
-        return d1 == .volume || d1 == .weight
+        if d1 == d2 { return d1 == .volume || d1 == .weight }
+        guard density != nil else { return false }
+        return (d1 == .volume && d2 == .weight) || (d1 == .weight && d2 == .volume)
     }
 
     // MARK: - Display formatting

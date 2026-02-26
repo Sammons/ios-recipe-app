@@ -7,6 +7,7 @@ struct IngredientCatalogView: View {
     @State private var searchText = ""
     @State private var selectedCategory = "All"
     @State private var seededCount = 0
+    @State private var editingIngredient: Ingredient?
 
     private var categoryOptions: [String] {
         ["All"] + IngredientCategory.allCategories
@@ -67,9 +68,21 @@ struct IngredientCatalogView: View {
                                 HStack {
                                     Text(ingredient.displayName)
                                     Spacer()
+                                    if let density = ingredient.density {
+                                        Text(String(format: "%.3g g/mL", density))
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(.quaternary, in: Capsule())
+                                    }
                                     Text(ingredient.name)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    editingIngredient = ingredient
                                 }
                             }
                         }
@@ -98,6 +111,63 @@ struct IngredientCatalogView: View {
             }
             .onAppear {
                 seededCount = IngredientCatalogSeeder.seedMissing(context: modelContext)
+            }
+            .sheet(item: $editingIngredient) { ingredient in
+                IngredientDensitySheet(ingredient: ingredient)
+                    .presentationDetents([.medium])
+            }
+        }
+    }
+}
+
+// MARK: - Density edit sheet
+
+private struct IngredientDensitySheet: View {
+    let ingredient: Ingredient
+    @State private var densityText: String
+    @Environment(\.dismiss) private var dismiss
+
+    init(ingredient: Ingredient) {
+        self.ingredient = ingredient
+        self._densityText = State(
+            initialValue: ingredient.density.map { String($0) } ?? ""
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Ingredient") {
+                    LabeledContent("Name", value: ingredient.displayName)
+                    LabeledContent("Category", value: ingredient.category)
+                }
+
+                Section {
+                    TextField("e.g. 0.53 for flour, 1.0 for water", text: $densityText)
+                        .keyboardType(.decimalPad)
+                        .accessibilityIdentifier("ingredient-density-field")
+                } header: {
+                    Text("Density (g/mL)")
+                } footer: {
+                    Text(
+                        "Enables automatic conversion between volume (cups, tbsp) and weight (g, oz). "
+                        + "Leave blank if unknown."
+                    )
+                }
+            }
+            .navigationTitle("Edit Ingredient")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        let trimmed = densityText.trimmingCharacters(in: .whitespaces)
+                        ingredient.density = trimmed.isEmpty ? nil : Double(trimmed)
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
             }
         }
     }
