@@ -3,16 +3,26 @@ import SwiftData
 
 @MainActor
 struct ShoppingListGenerator {
+
+    // MARK: - Types
+
     private struct NeedKey: Hashable {
         let name: String
-        let normalizedUnit: String
+        /// UnitConverter.aggregationKey: "volume"/"weight" for measurable units,
+        /// canonical unit string for count/other — enables cross-unit aggregation.
+        let aggKey: String
     }
 
-    private struct NeededItem {
+    private struct NeedValue {
         let ingredient: Ingredient
-        let unit: String
-        var quantity: Double
+        /// Quantity in base units: tsp (volume), g (weight), raw qty (count/other).
+        var baseQuantity: Double
+        let dimension: UnitDimension
+        /// Canonical unit of first-seen ingredient — used as fallback display for count/other.
+        let firstUnit: String
     }
+
+    // MARK: - Public API
 
     static func generate(context: ModelContext, lookaheadDays: Int = 7) {
         // Clear existing auto-generated unchecked items
@@ -35,78 +45,83 @@ struct ShoppingListGenerator {
         )
         guard let entries = try? context.fetch(entryDescriptor) else { return }
 
-        // Aggregate ingredient needs by canonical (ingredient name + normalized unit).
-        var needed: [NeedKey: NeededItem] = [:]
+        // Aggregate ingredient needs.
+        //
+        // Key: (ingredient.name, aggKey) where aggKey is the unit dimension for
+        // measurable units ("volume"/"weight"), or the canonical unit string for
+        // count/other. This enables cross-unit aggregation (e.g. 1 cup + 4 tbsp
+        // flour → 1.25 cups) while keeping "3 large eggs" and "3 medium eggs" separate.
+        var needed: [NeedKey: NeedValue] = [:]
+
         for entry in entries {
             guard let recipe = entry.recipe else { continue }
             let servingMultiplier =
                 recipe.servings > 0 ? Double(entry.servings) / Double(recipe.servings) : 1.0
             for ri in recipe.recipeIngredients {
                 guard let ingredient = ri.ingredient else { continue }
-                let trimmedUnit = ri.unit.trimmingCharacters(in: .whitespacesAndNewlines)
-                let normalizedUnit = UnitTextNormalizer.normalize(trimmedUnit)
-                let key = NeedKey(name: ingredient.name, normalizedUnit: normalizedUnit)
-                let qty = ri.quantity * servingMultiplier
-                if var existingNeed = needed[key] {
-                    existingNeed.quantity += qty
-                    needed[key] = existingNeed
+                let aggKey = UnitConverter.aggregationKey(for: ri.unit)
+                let key = NeedKey(name: ingredient.name, aggKey: aggKey)
+                let scaledQty = ri.quantity * servingMultiplier
+                let dim = UnitConverter.dimension(of: ri.unit)
+                let baseQty = UnitConverter.toBaseUnit(quantity: scaledQty, unit: ri.unit) ?? scaledQty
+
+                if var existing = needed[key] {
+                    existing.baseQuantity += baseQty
+                    needed[key] = existing
                 } else {
-                    needed[key] = NeededItem(
+                    needed[key] = NeedValue(
                         ingredient: ingredient,
-                        unit: trimmedUnit.isEmpty ? normalizedUnit : trimmedUnit,
-                        quantity: qty
+                        baseQuantity: baseQty,
+                        dimension: dim,
+                        firstUnit: UnitConverter.normalize(ri.unit)
                     )
                 }
             }
         }
 
-        // Subtract inventory using normalized unit matching.
+        // Build inventory map keyed by (name, aggKey) in base units.
         let inventoryDescriptor = FetchDescriptor<InventoryItem>()
         let inventory = (try? context.fetch(inventoryDescriptor)) ?? []
         var inventoryMap: [NeedKey: Double] = [:]
         for item in inventory {
             guard let ingredient = item.ingredient else { continue }
-            let key = NeedKey(
-                name: ingredient.name,
-                normalizedUnit: UnitTextNormalizer.normalize(item.unit)
-            )
-            inventoryMap[key, default: 0] += item.quantity
+            let aggKey = UnitConverter.aggregationKey(for: item.unit)
+            let key = NeedKey(name: ingredient.name, aggKey: aggKey)
+            let baseQty = UnitConverter.toBaseUnit(quantity: item.quantity, unit: item.unit) ?? item.quantity
+            inventoryMap[key, default: 0] += baseQty
         }
 
-        let sortedNeeds = needed.values.sorted { lhs, rhs in
-            let lhsCategoryRank = IngredientCategory.allCategories.firstIndex(of: lhs.ingredient.category) ?? Int.max
-            let rhsCategoryRank = IngredientCategory.allCategories.firstIndex(of: rhs.ingredient.category) ?? Int.max
-            if lhsCategoryRank != rhsCategoryRank {
-                return lhsCategoryRank < rhsCategoryRank
-            }
-
-            let nameCompare = lhs.ingredient.displayName.localizedCaseInsensitiveCompare(rhs.ingredient.displayName)
-            if nameCompare != .orderedSame {
-                return nameCompare == .orderedAscending
-            }
-
-            let lhsUnit = UnitTextNormalizer.normalize(lhs.unit)
-            let rhsUnit = UnitTextNormalizer.normalize(rhs.unit)
-            let unitCompare = lhsUnit.localizedCaseInsensitiveCompare(rhsUnit)
-            return unitCompare == .orderedAscending
+        // Sort needs by category, then ingredient name, then unit for deterministic output.
+        let sortedNeeds = needed.sorted { lhs, rhs in
+            let li = lhs.value.ingredient
+            let ri = rhs.value.ingredient
+            let lCat = IngredientCategory.allCategories.firstIndex(of: li.category) ?? Int.max
+            let rCat = IngredientCategory.allCategories.firstIndex(of: ri.category) ?? Int.max
+            if lCat != rCat { return lCat < rCat }
+            let nameOrder = li.displayName.localizedCaseInsensitiveCompare(ri.displayName)
+            if nameOrder != .orderedSame { return nameOrder == .orderedAscending }
+            let unitOrder = lhs.value.firstUnit.localizedCaseInsensitiveCompare(rhs.value.firstUnit)
+            return unitOrder == .orderedAscending
         }
 
-        // Create shopping list items in deterministic sorted order.
-        for need in sortedNeeds {
-            let inventoryKey = NeedKey(
-                name: need.ingredient.name,
-                normalizedUnit: UnitTextNormalizer.normalize(need.unit)
-            )
-
-            var toBuy = need.quantity
-            if let onHand = inventoryMap[inventoryKey] {
-                toBuy -= onHand
+        // Create shopping list items for any positive remaining need.
+        for (key, need) in sortedNeeds {
+            var baseToBuy = need.baseQuantity
+            if let baseOnHand = inventoryMap[key] {
+                baseToBuy -= baseOnHand
             }
-            guard toBuy > 0 else { continue }
+            guard baseToBuy > 0 else { continue }
+
+            // Convert base quantity to a human-readable (quantity, unit) pair.
+            let (displayQty, displayUnit) = displayQuantity(
+                baseQty: baseToBuy,
+                dimension: need.dimension,
+                fallbackUnit: need.firstUnit
+            )
 
             let item = ShoppingListItem(
-                quantity: toBuy,
-                unit: need.unit,
+                quantity: displayQty,
+                unit: displayUnit,
                 isAutoGenerated: true,
                 ingredient: need.ingredient
             )
@@ -114,5 +129,20 @@ struct ShoppingListGenerator {
         }
 
         try? context.save()
+    }
+
+    // MARK: - Private helpers
+
+    private static func displayQuantity(
+        baseQty: Double,
+        dimension: UnitDimension,
+        fallbackUnit: String
+    ) -> (quantity: Double, unit: String) {
+        switch dimension {
+        case .volume, .weight:
+            return UnitConverter.prettyDisplay(baseQuantity: baseQty, dimension: dimension)
+        case .count, .other:
+            return (baseQty, fallbackUnit)
+        }
     }
 }

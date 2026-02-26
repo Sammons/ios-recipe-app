@@ -44,7 +44,26 @@ struct MealCompletionService {
             else { continue }
 
             let used = ri.quantity * servingMultiplier
-            inventoryItem.quantity = max(0, inventoryItem.quantity - used)
+
+            // Determine how much to deduct from inventory, handling unit mismatches.
+            // If units are identical (or both normalize to the same string) deduct directly.
+            // If units are compatible (same dimension, e.g. tbsp vs cups), convert first.
+            // If units are incompatible (e.g. grams vs cups), skip deduction for this item.
+            let deductAmount: Double?
+            let recipeUnit = ri.unit
+            let inventoryUnit = inventoryItem.unit
+
+            if UnitConverter.normalize(recipeUnit) == UnitConverter.normalize(inventoryUnit) {
+                deductAmount = used
+            } else if UnitConverter.areCompatible(recipeUnit, inventoryUnit) {
+                deductAmount = UnitConverter.convert(quantity: used, from: recipeUnit, to: inventoryUnit)
+            } else {
+                deductAmount = nil
+            }
+
+            guard let amount = deductAmount else { continue }
+
+            inventoryItem.quantity = max(0, inventoryItem.quantity - amount)
             inventoryItem.lastUpdated = Date()
 
             if inventoryItem.quantity <= 0 {
