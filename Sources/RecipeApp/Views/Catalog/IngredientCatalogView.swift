@@ -125,6 +125,7 @@ struct IngredientCatalogView: View {
 private struct IngredientDensitySheet: View {
     let ingredient: Ingredient
     @State private var densityText: String
+    @State private var densityError: String?
     @Environment(\.dismiss) private var dismiss
 
     init(ingredient: Ingredient) {
@@ -143,9 +144,20 @@ private struct IngredientDensitySheet: View {
                 }
 
                 Section {
-                    TextField("e.g. 0.53 for flour, 1.0 for water", text: $densityText)
-                        .keyboardType(.decimalPad)
-                        .accessibilityIdentifier("ingredient-density-field")
+                    VStack(alignment: .leading, spacing: 6) {
+                        TextField("e.g. 0.53 for flour, 1.0 for water", text: $densityText)
+                            .keyboardType(.decimalPad)
+                            .accessibilityIdentifier("ingredient-density-field")
+                            .onChange(of: densityText) { _, _ in
+                                densityError = nil
+                            }
+
+                        if let densityError {
+                            Text(densityError)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
                 } header: {
                     Text("Density (g/mL)")
                 } footer: {
@@ -160,8 +172,19 @@ private struct IngredientDensitySheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        let trimmed = densityText.trimmingCharacters(in: .whitespaces)
-                        ingredient.density = trimmed.isEmpty ? nil : Double(trimmed)
+                        let trimmed = densityText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if trimmed.isEmpty {
+                            ingredient.density = nil
+                            dismiss()
+                            return
+                        }
+
+                        guard let parsed = Double(trimmed), parsed > 0, parsed.isFinite else {
+                            densityError = "Enter a positive number."
+                            return
+                        }
+
+                        ingredient.density = parsed
                         dismiss()
                     }
                 }

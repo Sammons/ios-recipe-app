@@ -290,6 +290,17 @@ struct UnitConverterTests {
         #expect(UnitConverter.convert(quantity: 100, from: "g", to: "tbsp", density: nil) == nil)
     }
 
+    @Test func crossDimConvertWithNonPositiveDensityReturnsNil() {
+        #expect(UnitConverter.convert(quantity: 1, from: "cup", to: "g", density: 0) == nil)
+        #expect(UnitConverter.convert(quantity: 100, from: "g", to: "tbsp", density: -0.5) == nil)
+    }
+
+    @Test func crossDimConvertWithNonFiniteDensityReturnsNil() {
+        #expect(UnitConverter.convert(quantity: 1, from: "cup", to: "g", density: .infinity) == nil)
+        #expect(UnitConverter.convert(quantity: 100, from: "g", to: "tbsp", density: -.infinity) == nil)
+        #expect(UnitConverter.convert(quantity: 2, from: "tbsp", to: "oz", density: .nan) == nil)
+    }
+
     @Test func crossDimConvertRoundTrip() {
         // Convert 1 cup honey → g → back to cup; should recover ≈ 1 cup
         let density = 1.420
@@ -310,6 +321,13 @@ struct UnitConverterTests {
         // Existing behaviour preserved with nil density
         #expect(UnitConverter.areCompatible("cup", "g", density: nil) == false)
         #expect(UnitConverter.areCompatible("oz", "fl oz", density: nil) == false)
+    }
+
+    @Test func areCompatibleCrossDimWithInvalidDensityReturnsFalse() {
+        #expect(UnitConverter.areCompatible("cup", "g", density: 0) == false)
+        #expect(UnitConverter.areCompatible("cup", "g", density: -1.0) == false)
+        #expect(UnitConverter.areCompatible("cup", "g", density: .infinity) == false)
+        #expect(UnitConverter.areCompatible("cup", "g", density: .nan) == false)
     }
 
     // MARK: Pretty display
@@ -839,5 +857,37 @@ struct ShoppingListCrossDimConversionTests {
         #expect(items.count == 1)
         #expect(items[0].unit == "g")
         #expect(abs(items[0].quantity - 50.3) < 2.0)
+    }
+
+    @Test @MainActor func crossDeductsInventoryWithDensityReverseDirection() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let flour = Ingredient(
+            name: "flour", displayName: "Flour",
+            category: IngredientCategory.grain, density: 0.529
+        )
+        context.insert(flour)
+
+        // Recipe needs 200 g flour (weight)
+        let recipe = Recipe(title: "Muffins", servings: 1)
+        context.insert(recipe)
+        let ri = RecipeIngredient(quantity: 200, unit: "g", recipe: recipe, ingredient: flour)
+        context.insert(ri)
+
+        // Inventory: 2 cups flour ≈ 250.3 g with density 0.529 (1 cup ≈ 125.15 g)
+        // 2 cups covers the 200 g need, so no shopping item needed.
+        let inventory = InventoryItem(quantity: 2, unit: "cup", ingredient: flour)
+        context.insert(inventory)
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        let entry = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 1, recipe: recipe)
+        context.insert(entry)
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        #expect(items.count == 0)
     }
 }
