@@ -7,7 +7,7 @@ struct IngredientCatalogSeeder {
         let descriptor = FetchDescriptor<Ingredient>()
         let existing = (try? context.fetch(descriptor)) ?? []
         var existingNames = Set(existing.map(\.name))
-        let existingByName = Dictionary(uniqueKeysWithValues: existing.map { ($0.name, $0) })
+        let existingByName = Dictionary(existing.map { ($0.name, $0) }) { _, new in new }
         var catalogNamesSeen: Set<String> = []
         var inserted = 0
         var densityUpdated = 0

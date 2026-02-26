@@ -196,7 +196,7 @@ struct UnitConverter {
         }
 
         // Cross-dimension requires density.
-        guard let d = density else { return nil }
+        guard let d = density, d > 0, d.isFinite else { return nil }
 
         // Volume → Weight: tsp → ml → g → target weight unit.
         // 1 tsp = 4.92892 ml (matches volumeFactors["ml"] = 1/4.92892).
@@ -225,7 +225,7 @@ struct UnitConverter {
         let d1 = dimension(of: u1)
         let d2 = dimension(of: u2)
         if d1 == d2 { return d1 == .volume || d1 == .weight }
-        guard density != nil else { return false }
+        guard let d = density, d > 0, d.isFinite else { return false }
         return (d1 == .volume && d2 == .weight) || (d1 == .weight && d2 == .volume)
     }
 
