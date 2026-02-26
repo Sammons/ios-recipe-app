@@ -31,7 +31,7 @@ struct PantryCoverageServiceTests {
         #expect(coverage.totalIngredients == 1)
     }
 
-    @Test @MainActor func mealCoverageCanBePartial() throws {
+    @Test @MainActor func mealCoverageCanBePartialWhenQuantityInsufficient() throws {
         let container = try makeTestContainer()
         let context = container.mainContext
 
@@ -40,7 +40,8 @@ struct PantryCoverageServiceTests {
         context.insert(flour)
         context.insert(milk)
         context.insert(InventoryItem(quantity: 100, unit: "g", ingredient: flour))
-        context.insert(InventoryItem(quantity: 200, unit: "cups", ingredient: milk))
+        // 50 ml on hand, recipe needs 200 ml — insufficient
+        context.insert(InventoryItem(quantity: 50, unit: "ml", ingredient: milk))
 
         let pancakes = Recipe(title: "Pancakes", servings: 1)
         context.insert(pancakes)
@@ -59,6 +60,130 @@ struct PantryCoverageServiceTests {
         #expect(coverage.level == .partial)
         #expect(coverage.coveredIngredients == 1)
         #expect(coverage.totalIngredients == 2)
+    }
+
+    // MARK: - Cross-unit matching tests
+
+    @Test @MainActor func mealCoverageMatchesSameDimDifferentUnits() throws {
+        // Recipe calls for oz; pantry has lb — both weight, should be covered.
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let coffeeBeans = Ingredient(name: "coffee beans")
+        context.insert(coffeeBeans)
+        // 1 lb = 453.6g; recipe needs 2 oz = 56.7g — plenty on hand
+        context.insert(InventoryItem(quantity: 1, unit: "lb", ingredient: coffeeBeans))
+
+        let latte = Recipe(title: "Latte", servings: 1)
+        context.insert(latte)
+        context.insert(RecipeIngredient(quantity: 2, unit: "oz", recipe: latte, ingredient: coffeeBeans))
+
+        let entry = MealPlanEntry(
+            date: DateHelpers.startOfDay(Date()),
+            mealSlot: MealSlot.breakfast,
+            servings: 1,
+            recipe: latte
+        )
+        context.insert(entry)
+
+        let coverage = PantryCoverageService.mealCoverage(for: entry)
+        #expect(coverage.level == .full)
+        #expect(coverage.coveredIngredients == 1)
+    }
+
+    @Test @MainActor func mealCoverageMatchesCrossDimWithDensity() throws {
+        // Recipe calls for oz (weight); pantry has gallon (volume).
+        // Milk density (1.030 g/ml) bridges the dimensions.
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let milk = Ingredient(name: "milk", density: 1.030)
+        context.insert(milk)
+        // 1 gallon ≈ 3877g; recipe needs 8 oz = 226.8g — plenty on hand
+        context.insert(InventoryItem(quantity: 1, unit: "gallon", ingredient: milk))
+
+        let latte = Recipe(title: "Latte", servings: 1)
+        context.insert(latte)
+        context.insert(RecipeIngredient(quantity: 8, unit: "oz", recipe: latte, ingredient: milk))
+
+        let entry = MealPlanEntry(
+            date: DateHelpers.startOfDay(Date()),
+            mealSlot: MealSlot.breakfast,
+            servings: 1,
+            recipe: latte
+        )
+        context.insert(entry)
+
+        let coverage = PantryCoverageService.mealCoverage(for: entry)
+        #expect(coverage.level == .full)
+        #expect(coverage.coveredIngredients == 1)
+    }
+
+    @Test @MainActor func mealCoverageMatchesSameDimVolumeDifferentUnits() throws {
+        // Recipe calls for fl oz (volume); pantry has gallon (volume) — same dimension.
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let milk = Ingredient(name: "milk")
+        context.insert(milk)
+        // 1 gallon = 128 fl oz; recipe needs 8 fl oz — plenty on hand
+        context.insert(InventoryItem(quantity: 1, unit: "gallon", ingredient: milk))
+
+        let latte = Recipe(title: "Latte", servings: 1)
+        context.insert(latte)
+        context.insert(RecipeIngredient(quantity: 8, unit: "fl oz", recipe: latte, ingredient: milk))
+
+        let entry = MealPlanEntry(
+            date: DateHelpers.startOfDay(Date()),
+            mealSlot: MealSlot.breakfast,
+            servings: 1,
+            recipe: latte
+        )
+        context.insert(entry)
+
+        let coverage = PantryCoverageService.mealCoverage(for: entry)
+        #expect(coverage.level == .full)
+        #expect(coverage.coveredIngredients == 1)
+    }
+
+    @Test @MainActor func forecastCoverageMatchesCrossUnitIngredients() throws {
+        // Full latte scenario: coffee beans (oz recipe, lb pantry) + milk (fl oz recipe, gallon pantry).
+        // Week of 7 lattes. Pantry: 1 lb coffee, 1 gallon milk.
+        // Need: 7×2 oz coffee = 14 oz = 396.9g; have 453.6g (1 lb) — OK.
+        // Need: 7×8 fl oz milk = 56 fl oz = 336 tsp; have 768 tsp (1 gal) — OK.
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let coffeeBeans = Ingredient(name: "coffee beans")
+        let milk = Ingredient(name: "milk")
+        context.insert(coffeeBeans)
+        context.insert(milk)
+        context.insert(InventoryItem(quantity: 1, unit: "lb", ingredient: coffeeBeans))
+        context.insert(InventoryItem(quantity: 1, unit: "gallon", ingredient: milk))
+
+        let latte = Recipe(title: "Latte", servings: 1)
+        context.insert(latte)
+        context.insert(RecipeIngredient(quantity: 2, unit: "oz", recipe: latte, ingredient: coffeeBeans))
+        context.insert(RecipeIngredient(quantity: 8, unit: "fl oz", recipe: latte, ingredient: milk))
+
+        let today = DateHelpers.startOfDay(Date())
+        var weekDays: [Date] = []
+        var entries: [MealPlanEntry] = []
+        for i in 0..<7 {
+            let day = DateHelpers.addDays(i, to: today)
+            weekDays.append(day)
+            let e = MealPlanEntry(date: day, mealSlot: MealSlot.breakfast, servings: 1, recipe: latte)
+            context.insert(e)
+            entries.append(e)
+        }
+
+        let forecast = PantryCoverageService.forecastDayCoverage(for: weekDays, entries: entries)
+
+        for day in weekDays {
+            let key = DateHelpers.startOfDay(day)
+            #expect(forecast[key]?.level == .full, "Expected full coverage on day \(day)")
+            #expect(forecast[key]?.readyMeals == 1)
+        }
     }
 
     @Test @MainActor func dayCoverageCountsReadyPlannedMeals() throws {
