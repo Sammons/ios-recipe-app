@@ -259,6 +259,59 @@ struct UnitConverterTests {
         #expect(UnitConverter.areCompatible("tbsp", "lb") == false)
     }
 
+    // MARK: Density-aware cross-dimension conversion
+
+    @Test func convertsCupToGramsWithDensity() {
+        // 1 cup flour (density 0.529 g/ml):
+        // 1 cup = 48 tsp × 4.92892 ml/tsp = 236.59 ml × 0.529 g/ml ≈ 125.1 g
+        let result = UnitConverter.convert(quantity: 1, from: "cup", to: "g", density: 0.529)
+        #expect(result != nil)
+        #expect(abs(result! - 125.1) < 1.0)
+    }
+
+    @Test func convertsGramsToCupWithDensity() {
+        // 125 g flour (density 0.529 g/ml) ≈ 1 cup (round-trip)
+        let result = UnitConverter.convert(quantity: 125, from: "g", to: "cup", density: 0.529)
+        #expect(result != nil)
+        #expect(abs(result! - 1.0) < 0.05)
+    }
+
+    @Test func convertsTbspToOzWithDensity() {
+        // 1 tbsp butter (density 0.911 g/ml):
+        // 3 tsp × 4.92892 ml/tsp = 14.787 ml × 0.911 = 13.471 g / 28.34952 g/oz ≈ 0.475 oz
+        let result = UnitConverter.convert(quantity: 1, from: "tbsp", to: "oz", density: 0.911)
+        #expect(result != nil)
+        #expect(abs(result! - 0.475) < 0.01)
+    }
+
+    @Test func crossDimConvertWithNilDensityReturnsNil() {
+        // No density → cross-dimension still returns nil (same as before)
+        #expect(UnitConverter.convert(quantity: 1, from: "cup", to: "g", density: nil) == nil)
+        #expect(UnitConverter.convert(quantity: 100, from: "g", to: "tbsp", density: nil) == nil)
+    }
+
+    @Test func crossDimConvertRoundTrip() {
+        // Convert 1 cup honey → g → back to cup; should recover ≈ 1 cup
+        let density = 1.420
+        let grams = UnitConverter.convert(quantity: 1, from: "cup", to: "g", density: density)
+        #expect(grams != nil)
+        let cups = UnitConverter.convert(quantity: grams!, from: "g", to: "cup", density: density)
+        #expect(cups != nil)
+        #expect(abs(cups! - 1.0) < 0.001)
+    }
+
+    @Test func areCompatibleCrossDimWithDensity() {
+        #expect(UnitConverter.areCompatible("cup", "g", density: 0.529) == true)
+        #expect(UnitConverter.areCompatible("oz", "cup", density: 0.911) == true)
+        #expect(UnitConverter.areCompatible("tbsp", "oz", density: 0.900) == true)
+    }
+
+    @Test func areCompatibleCrossDimWithoutDensityReturnsFalse() {
+        // Existing behaviour preserved with nil density
+        #expect(UnitConverter.areCompatible("cup", "g", density: nil) == false)
+        #expect(UnitConverter.areCompatible("oz", "fl oz", density: nil) == false)
+    }
+
     // MARK: Pretty display
 
     @Test func prettyDisplayVolume() {
@@ -603,9 +656,188 @@ struct MealCompletionUnitConversionTests {
 
         MealCompletionService.markCompleted(entry, context: context)
 
-        // Should not deduct — units incompatible
+        // Should not deduct — units incompatible (no density set)
         let items = try context.fetch(FetchDescriptor<InventoryItem>())
         #expect(items.count == 1)
         #expect(abs(items[0].quantity - 100.0) < 0.01)
+    }
+}
+
+// MARK: - Integration tests: cross-dimension with density (RecipeFilterService)
+
+@Suite("RecipeFilterService.CrossDimConversion", .serialized)
+struct RecipeFilterCrossDimConversionTests {
+
+    @Test @MainActor func canCookWithCrossDimUnitAndDensity() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let flour = Ingredient(
+            name: "flour", displayName: "Flour",
+            category: IngredientCategory.grain, density: 0.529
+        )
+        context.insert(flour)
+
+        // Recipe needs 1 cup flour (volume); 1 cup ≈ 125 g
+        let recipe = Recipe(title: "Pancakes", servings: 1)
+        context.insert(recipe)
+        let ri = RecipeIngredient(quantity: 1, unit: "cup", recipe: recipe, ingredient: flour)
+        context.insert(ri)
+
+        // Inventory: 150 g flour (weight) — sufficient
+        let inventory = InventoryItem(quantity: 150, unit: "g", ingredient: flour)
+        context.insert(inventory)
+
+        try context.save()
+
+        let result = RecipeFilterService.filter(recipes: [recipe], mode: .canCookNow, context: context)
+        #expect(result.count == 1)
+    }
+
+    @Test @MainActor func cannotCookWithInsufficientCrossDimInventory() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let flour = Ingredient(
+            name: "flour", displayName: "Flour",
+            category: IngredientCategory.grain, density: 0.529
+        )
+        context.insert(flour)
+
+        // Recipe needs 2 cups flour ≈ 250 g
+        let recipe = Recipe(title: "Cake", servings: 1)
+        context.insert(recipe)
+        let ri = RecipeIngredient(quantity: 2, unit: "cup", recipe: recipe, ingredient: flour)
+        context.insert(ri)
+
+        // Inventory: only 100 g — not enough
+        let inventory = InventoryItem(quantity: 100, unit: "g", ingredient: flour)
+        context.insert(inventory)
+
+        try context.save()
+
+        let result = RecipeFilterService.filter(recipes: [recipe], mode: .canCookNow, context: context)
+        #expect(result.count == 0)
+    }
+}
+
+// MARK: - Integration tests: cross-dimension with density (MealCompletionService)
+
+@Suite("MealCompletionService.CrossDimConversion", .serialized)
+struct MealCompletionCrossDimConversionTests {
+
+    @Test @MainActor func deductsCrossDimWithDensity() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        // Butter with density 0.911 g/ml
+        let butter = Ingredient(
+            name: "butter", displayName: "Butter",
+            category: IngredientCategory.dairy, density: 0.911
+        )
+        context.insert(butter)
+
+        // Recipe uses 4 tbsp butter (volume):
+        // 4 tbsp = 12 tsp × 4.92892 ml/tsp = 59.15 ml × 0.911 = 53.88 g
+        let recipe = Recipe(title: "Toast", servings: 1)
+        context.insert(recipe)
+        let ri = RecipeIngredient(quantity: 4, unit: "tbsp", recipe: recipe, ingredient: butter)
+        context.insert(ri)
+
+        // Inventory: 100 g butter
+        let inventory = InventoryItem(quantity: 100, unit: "g", ingredient: butter)
+        context.insert(inventory)
+
+        let yesterday = DateHelpers.addDays(-1, to: DateHelpers.startOfDay(Date()))
+        let entry = MealPlanEntry(date: yesterday, mealSlot: MealSlot.breakfast, servings: 1, recipe: recipe)
+        context.insert(entry)
+        try context.save()
+
+        MealCompletionService.markCompleted(entry, context: context)
+
+        let items = try context.fetch(FetchDescriptor<InventoryItem>())
+        #expect(items.count == 1)
+        // 100 g − 53.88 g ≈ 46.12 g remaining
+        #expect(abs(items[0].quantity - 46.12) < 1.0)
+        #expect(items[0].unit == "g")
+    }
+}
+
+// MARK: - Integration tests: cross-dimension with density (ShoppingListGenerator)
+
+@Suite("ShoppingListGenerator.CrossDimConversion", .serialized)
+struct ShoppingListCrossDimConversionTests {
+
+    @Test @MainActor func aggregatesCrossDimUnitsWithDensity() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let flour = Ingredient(
+            name: "flour", displayName: "Flour",
+            category: IngredientCategory.grain, density: 0.529
+        )
+        context.insert(flour)
+
+        // Recipe 1: 1 cup flour (volume) ≈ 125.15 g
+        let recipe1 = Recipe(title: "Cake", servings: 1)
+        context.insert(recipe1)
+        let ri1 = RecipeIngredient(quantity: 1, unit: "cup", recipe: recipe1, ingredient: flour)
+        context.insert(ri1)
+
+        // Recipe 2: 100 g flour (weight)
+        let recipe2 = Recipe(title: "Cookies", servings: 1)
+        context.insert(recipe2)
+        let ri2 = RecipeIngredient(quantity: 100, unit: "g", recipe: recipe2, ingredient: flour)
+        context.insert(ri2)
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        let entry1 = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.lunch, servings: 1, recipe: recipe1)
+        let entry2 = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 1, recipe: recipe2)
+        context.insert(entry1)
+        context.insert(entry2)
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        // Both recipes normalized to grams → single shopping list item
+        #expect(items.count == 1)
+        // 125.15 g + 100 g ≈ 225.15 g (displayed as g since < 1000)
+        #expect(items[0].unit == "g")
+        #expect(abs(items[0].quantity - 225.15) < 2.0)
+    }
+
+    @Test @MainActor func crossDeductsInventoryWithDensity() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let flour = Ingredient(
+            name: "flour", displayName: "Flour",
+            category: IngredientCategory.grain, density: 0.529
+        )
+        context.insert(flour)
+
+        // Recipe needs 2 cups flour ≈ 250.3 g
+        let recipe = Recipe(title: "Bread", servings: 1)
+        context.insert(recipe)
+        let ri = RecipeIngredient(quantity: 2, unit: "cup", recipe: recipe, ingredient: flour)
+        context.insert(ri)
+
+        // Inventory: 200 g flour (weight) — partially covers the volume need
+        let inventory = InventoryItem(quantity: 200, unit: "g", ingredient: flour)
+        context.insert(inventory)
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        let entry = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 1, recipe: recipe)
+        context.insert(entry)
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        // 2 cups ≈ 250.3 g needed − 200 g on hand = 50.3 g to buy
+        #expect(items.count == 1)
+        #expect(items[0].unit == "g")
+        #expect(abs(items[0].quantity - 50.3) < 2.0)
     }
 }

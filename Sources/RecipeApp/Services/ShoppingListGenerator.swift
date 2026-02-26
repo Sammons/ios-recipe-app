@@ -51,6 +51,9 @@ struct ShoppingListGenerator {
         // measurable units ("volume"/"weight"), or the canonical unit string for
         // count/other. This enables cross-unit aggregation (e.g. 1 cup + 4 tbsp
         // flour → 1.25 cups) while keeping "3 large eggs" and "3 medium eggs" separate.
+        //
+        // When an ingredient has a known density, all measurable quantities are
+        // normalized to grams (aggKey "weight") so volume and weight entries merge.
         var needed: [NeedKey: NeedValue] = [:]
 
         for entry in entries {
@@ -59,20 +62,36 @@ struct ShoppingListGenerator {
                 recipe.servings > 0 ? Double(entry.servings) / Double(recipe.servings) : 1.0
             for ri in recipe.recipeIngredients {
                 guard let ingredient = ri.ingredient else { continue }
-                let aggKey = UnitConverter.aggregationKey(for: ri.unit)
-                let key = NeedKey(name: ingredient.name, aggKey: aggKey)
                 let scaledQty = ri.quantity * servingMultiplier
+                let density = ingredient.density
                 let dim = UnitConverter.dimension(of: ri.unit)
-                let baseQty = UnitConverter.toBaseUnit(quantity: scaledQty, unit: ri.unit) ?? scaledQty
+
+                let effectiveAggKey: String
+                let effectiveDim: UnitDimension
+                let effectiveBaseQty: Double
+
+                if let d = density, (dim == .volume || dim == .weight),
+                   let grams = UnitConverter.convert(quantity: scaledQty, from: ri.unit, to: "g", density: d) {
+                    // Density known — normalize to grams so volume+weight merge.
+                    effectiveAggKey = "weight"
+                    effectiveDim = .weight
+                    effectiveBaseQty = grams
+                } else {
+                    effectiveAggKey = UnitConverter.aggregationKey(for: ri.unit)
+                    effectiveDim = dim
+                    effectiveBaseQty = UnitConverter.toBaseUnit(quantity: scaledQty, unit: ri.unit) ?? scaledQty
+                }
+
+                let key = NeedKey(name: ingredient.name, aggKey: effectiveAggKey)
 
                 if var existing = needed[key] {
-                    existing.baseQuantity += baseQty
+                    existing.baseQuantity += effectiveBaseQty
                     needed[key] = existing
                 } else {
                     needed[key] = NeedValue(
                         ingredient: ingredient,
-                        baseQuantity: baseQty,
-                        dimension: dim,
+                        baseQuantity: effectiveBaseQty,
+                        dimension: effectiveDim,
                         firstUnit: UnitConverter.normalize(ri.unit)
                     )
                 }
@@ -80,15 +99,29 @@ struct ShoppingListGenerator {
         }
 
         // Build inventory map keyed by (name, aggKey) in base units.
+        // Ingredients with known density are normalized to grams to match the needs map.
         let inventoryDescriptor = FetchDescriptor<InventoryItem>()
         let inventory = (try? context.fetch(inventoryDescriptor)) ?? []
         var inventoryMap: [NeedKey: Double] = [:]
         for item in inventory {
             guard let ingredient = item.ingredient else { continue }
-            let aggKey = UnitConverter.aggregationKey(for: item.unit)
-            let key = NeedKey(name: ingredient.name, aggKey: aggKey)
-            let baseQty = UnitConverter.toBaseUnit(quantity: item.quantity, unit: item.unit) ?? item.quantity
-            inventoryMap[key, default: 0] += baseQty
+            let density = ingredient.density
+            let dim = UnitConverter.dimension(of: item.unit)
+
+            let effectiveAggKey: String
+            let effectiveBaseQty: Double
+
+            if let d = density, (dim == .volume || dim == .weight),
+               let grams = UnitConverter.convert(quantity: item.quantity, from: item.unit, to: "g", density: d) {
+                effectiveAggKey = "weight"
+                effectiveBaseQty = grams
+            } else {
+                effectiveAggKey = UnitConverter.aggregationKey(for: item.unit)
+                effectiveBaseQty = UnitConverter.toBaseUnit(quantity: item.quantity, unit: item.unit) ?? item.quantity
+            }
+
+            let key = NeedKey(name: ingredient.name, aggKey: effectiveAggKey)
+            inventoryMap[key, default: 0] += effectiveBaseQty
         }
 
         // Sort needs by category, then ingredient name, then unit for deterministic output.

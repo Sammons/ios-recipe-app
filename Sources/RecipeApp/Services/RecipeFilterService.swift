@@ -53,24 +53,27 @@ struct RecipeFilterService {
 
     /// Returns true if the inventory item has at least as much as the recipe needs,
     /// accounting for unit conversion when units are compatible.
+    /// Cross-dimension conversion (e.g. cups vs g) is supported when the ingredient
+    /// has a known density.
     private static func hasSufficientInventory(
         ri: RecipeIngredient,
         inventoryItem: InventoryItem
     ) -> Bool {
         let recipeUnit = ri.unit
         let inventoryUnit = inventoryItem.unit
+        let density = ri.ingredient?.density
 
         if UnitConverter.normalize(recipeUnit) == UnitConverter.normalize(inventoryUnit) {
             // Same unit — compare directly
             return inventoryItem.quantity >= ri.quantity
-        } else if UnitConverter.areCompatible(recipeUnit, inventoryUnit) {
-            // Compatible units (e.g., tbsp vs cup) — convert recipe requirement to inventory unit
+        } else if UnitConverter.areCompatible(recipeUnit, inventoryUnit, density: density) {
+            // Compatible units (same-dim or cross-dim with density) — convert to inventory unit
             guard let convertedRequired = UnitConverter.convert(
-                quantity: ri.quantity, from: recipeUnit, to: inventoryUnit
+                quantity: ri.quantity, from: recipeUnit, to: inventoryUnit, density: density
             ) else { return false }
             return inventoryItem.quantity >= convertedRequired
         } else {
-            // Incompatible dimensions (e.g., g vs cup) — cannot confirm sufficiency
+            // Incompatible — cannot confirm sufficiency
             return false
         }
     }

@@ -6,6 +6,8 @@ final class Ingredient {
     @Attribute(.unique) var name: String
     var displayName: String
     var category: String
+    /// Density in g/ml. Nil means unknown; enables volume↔weight conversion when set.
+    var density: Double?
 
     @Relationship(inverse: \RecipeIngredient.ingredient)
     var recipeIngredients: [RecipeIngredient]
@@ -19,11 +21,13 @@ final class Ingredient {
     init(
         name: String,
         displayName: String? = nil,
-        category: String = IngredientCategory.other
+        category: String = IngredientCategory.other,
+        density: Double? = nil
     ) {
         self.name = name.lowercased()
         self.displayName = displayName ?? name
         self.category = category
+        self.density = density
         self.recipeIngredients = []
         self.shoppingListItems = []
     }

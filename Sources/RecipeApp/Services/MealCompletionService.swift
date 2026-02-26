@@ -48,15 +48,19 @@ struct MealCompletionService {
             // Determine how much to deduct from inventory, handling unit mismatches.
             // If units are identical (or both normalize to the same string) deduct directly.
             // If units are compatible (same dimension, e.g. tbsp vs cups), convert first.
-            // If units are incompatible (e.g. grams vs cups), skip deduction for this item.
+            // Cross-dimension (e.g. cups vs g) is supported when density is known.
+            // If units are incompatible and no density bridge exists, skip this item.
             let deductAmount: Double?
             let recipeUnit = ri.unit
             let inventoryUnit = inventoryItem.unit
+            let density = ingredient.density
 
             if UnitConverter.normalize(recipeUnit) == UnitConverter.normalize(inventoryUnit) {
                 deductAmount = used
-            } else if UnitConverter.areCompatible(recipeUnit, inventoryUnit) {
-                deductAmount = UnitConverter.convert(quantity: used, from: recipeUnit, to: inventoryUnit)
+            } else if UnitConverter.areCompatible(recipeUnit, inventoryUnit, density: density) {
+                deductAmount = UnitConverter.convert(
+                    quantity: used, from: recipeUnit, to: inventoryUnit, density: density
+                )
             } else {
                 deductAmount = nil
             }
