@@ -404,8 +404,8 @@ struct ShoppingListGeneratorUnitConversionTests {
         // Should aggregate into a single item (1 cup + 4 tbsp = 1.25 cups)
         #expect(items.count == 1)
         #expect(items[0].unit == "cup")
-        // 1 cup + 4 tbsp = 48 tsp + 12 tsp = 60 tsp = 1.25 cups
-        #expect(abs(items[0].quantity - 1.25) < 0.01)
+        // 1 cup + 4 tbsp = 48 tsp + 12 tsp = 60 tsp = 1.25 cups → snap to 1.5 (0.5 cup inc)
+        #expect(abs(items[0].quantity - 1.5) < 0.01)
     }
 
     @Test @MainActor func aggregatesCompatibleWeightUnits() throws {
@@ -437,11 +437,11 @@ struct ShoppingListGeneratorUnitConversionTests {
         ShoppingListGenerator.generate(context: context)
 
         let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
-        // 500 g + 0.5 kg = 1000 g → purchase catalog (Protein): lb, 0.25 inc
-        // 1000 g / 453.59 = 2.205 lb → snap 2.25 lb
+        // 500 g + 0.5 kg = 1000 g → purchase catalog (Protein): lb, 0.5 inc
+        // 1000 g / 453.59 = 2.205 lb → snap 2.5 lb
         #expect(items.count == 1)
         #expect(items[0].unit == "lb")
-        #expect(abs(items[0].quantity - 2.25) < 0.01)
+        #expect(abs(items[0].quantity - 2.5) < 0.01)
     }
 
     @Test @MainActor func deductsInventoryAcrossCompatibleVolumeUnits() throws {
@@ -470,9 +470,10 @@ struct ShoppingListGeneratorUnitConversionTests {
 
         let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         // 1 cup needed − 8 tbsp (0.5 cup) on hand = 24 tsp remaining
-        // Dairy volume: cup, 0.25 inc → 24/48 = 0.5 cup → snap 0.5 cup
+        // Milk has ingredient-specific override: half gallon (384 tsp), 0.5 inc
+        // 24 / 384 = 0.0625 half gallons → snap to 0.5 half gallon
         #expect(items.count == 1)
-        #expect(items[0].unit == "cup")
+        #expect(items[0].unit == "half gallon")
         #expect(abs(items[0].quantity - 0.5) < 0.01)
     }
 
@@ -502,10 +503,10 @@ struct ShoppingListGeneratorUnitConversionTests {
 
         let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         // No deduction across incompatible dimensions; 500 g flour (Grain) → lb
-        // 500 / 453.59 = 1.102 lb → snap 1.25 lb
+        // 500 / 453.59 = 1.102 lb → snap 2 lb (1 lb inc)
         #expect(items.count == 1)
         #expect(items[0].unit == "lb")
-        #expect(abs(items[0].quantity - 1.25) < 0.01)
+        #expect(abs(items[0].quantity - 2.0) < 0.01)
     }
 
     @Test @MainActor func countUnitsAggregateWithSameNormalizedUnit() throws {
@@ -822,11 +823,11 @@ struct ShoppingListCrossDimConversionTests {
 
         let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         // Both recipes normalized to grams → single shopping list item
-        // 125.15 g + 100 g ≈ 225.15 g → Grain weight: lb, 0.25 inc
-        // 225.15 / 453.59 = 0.496 lb → snap 0.5 lb
+        // 125.15 g + 100 g ≈ 225.15 g → Grain weight: lb, 1 lb inc
+        // 225.15 / 453.59 = 0.496 lb → snap 1 lb
         #expect(items.count == 1)
         #expect(items[0].unit == "lb")
-        #expect(abs(items[0].quantity - 0.5) < 0.01)
+        #expect(abs(items[0].quantity - 1.0) < 0.01)
     }
 
     @Test @MainActor func crossDeductsInventoryWithDensity() throws {
@@ -858,10 +859,10 @@ struct ShoppingListCrossDimConversionTests {
 
         let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         // 2 cups ≈ 250.3 g needed − 200 g on hand = 50.3 g to buy
-        // Grain weight: lb, 0.25 inc → 50.3 / 453.59 = 0.111 lb → snap 0.25 lb
+        // Grain weight: lb, 1 lb inc → 50.3 / 453.59 = 0.111 lb → snap 1 lb
         #expect(items.count == 1)
         #expect(items[0].unit == "lb")
-        #expect(abs(items[0].quantity - 0.25) < 0.01)
+        #expect(abs(items[0].quantity - 1.0) < 0.01)
     }
 
     @Test @MainActor func crossDeductsInventoryWithDensityReverseDirection() throws {

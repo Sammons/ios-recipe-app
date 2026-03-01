@@ -30,8 +30,8 @@ struct FunctionalFlowTests {
             )
         )
         #expect(generatedBeforeCompletion.count == 1)
-        // 300 g flour (Grain) → purchase catalog: lb, 0.25 inc → 0.661 lb → snap 0.75 lb
-        #expect(abs(generatedBeforeCompletion[0].quantity - 0.75) < 0.01)
+        // 300 g flour (Grain) → purchase catalog: lb, 1 lb inc → 0.661 lb → snap 1 lb
+        #expect(abs(generatedBeforeCompletion[0].quantity - 1.0) < 0.01)
         #expect(generatedBeforeCompletion[0].unit == "lb")
 
         MealCompletionService.markCompleted(entry, context: context)
@@ -118,8 +118,8 @@ struct FunctionalFlowTests {
         ShoppingListGenerator.generate(context: context, lookaheadDays: prefs[0].shoppingLookaheadDays)
         var items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         #expect(items.count == 1)
-        // 100 g tomato (Vegetable) → purchase catalog: lb, 0.25 inc → 0.220 lb → snap 0.25 lb
-        #expect(abs(items[0].quantity - 0.25) < 0.01)
+        // 100 g tomato (Vegetable) → purchase catalog: lb, 0.5 inc → 0.220 lb → snap 0.5 lb
+        #expect(abs(items[0].quantity - 0.5) < 0.01)
 
         prefs[0].shoppingLookaheadDays = 7
         try context.save()
@@ -127,7 +127,7 @@ struct FunctionalFlowTests {
         ShoppingListGenerator.generate(context: context, lookaheadDays: prefs[0].shoppingLookaheadDays)
         items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         #expect(items.count == 1)
-        // 200 g tomato (Vegetable) → 0.441 lb → snap 0.5 lb
+        // 200 g tomato (Vegetable) → 0.441 lb → snap 0.5 lb (0.5 lb increments)
         #expect(abs(items[0].quantity - 0.5) < 0.01)
     }
 }
