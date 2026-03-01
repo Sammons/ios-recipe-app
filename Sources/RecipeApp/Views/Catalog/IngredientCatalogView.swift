@@ -146,7 +146,9 @@ private struct IngredientDensitySheet: View {
                 Section {
                     VStack(alignment: .leading, spacing: 6) {
                         TextField("e.g. 0.53 for flour, 1.0 for water", text: $densityText)
+                            #if os(iOS)
                             .keyboardType(.decimalPad)
+                            #endif
                             .accessibilityIdentifier("ingredient-density-field")
                             .onChange(of: densityText) { _, _ in
                                 densityError = nil
@@ -168,7 +170,9 @@ private struct IngredientDensitySheet: View {
                 }
             }
             .navigationTitle("Edit Ingredient")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {

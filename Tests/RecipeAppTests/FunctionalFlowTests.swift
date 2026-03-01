@@ -30,8 +30,9 @@ struct FunctionalFlowTests {
             )
         )
         #expect(generatedBeforeCompletion.count == 1)
-        #expect(generatedBeforeCompletion[0].quantity == 300)
-        #expect(generatedBeforeCompletion[0].unit == "g")
+        // 300 g flour (Grain) → purchase catalog: lb, 0.25 inc → 0.661 lb → snap 0.75 lb
+        #expect(abs(generatedBeforeCompletion[0].quantity - 0.75) < 0.01)
+        #expect(generatedBeforeCompletion[0].unit == "lb")
 
         MealCompletionService.markCompleted(entry, context: context)
         try context.save()
@@ -117,7 +118,8 @@ struct FunctionalFlowTests {
         ShoppingListGenerator.generate(context: context, lookaheadDays: prefs[0].shoppingLookaheadDays)
         var items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         #expect(items.count == 1)
-        #expect(items[0].quantity == 100)
+        // 100 g tomato (Vegetable) → purchase catalog: lb, 0.25 inc → 0.220 lb → snap 0.25 lb
+        #expect(abs(items[0].quantity - 0.25) < 0.01)
 
         prefs[0].shoppingLookaheadDays = 7
         try context.save()
@@ -125,6 +127,7 @@ struct FunctionalFlowTests {
         ShoppingListGenerator.generate(context: context, lookaheadDays: prefs[0].shoppingLookaheadDays)
         items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         #expect(items.count == 1)
-        #expect(items[0].quantity == 200)
+        // 200 g tomato (Vegetable) → 0.441 lb → snap 0.5 lb
+        #expect(abs(items[0].quantity - 0.5) < 0.01)
     }
 }
