@@ -145,10 +145,11 @@ struct ShoppingListGenerator {
             }
             guard baseToBuy > 0 else { continue }
 
-            // Convert base quantity to a human-readable (quantity, unit) pair.
+            // Convert base quantity to a purchasable (quantity, unit) pair.
             let (displayQty, displayUnit) = displayQuantity(
                 baseQty: baseToBuy,
                 dimension: need.dimension,
+                category: need.ingredient.category,
                 fallbackUnit: need.firstUnit
             )
 
@@ -169,10 +170,17 @@ struct ShoppingListGenerator {
     private static func displayQuantity(
         baseQty: Double,
         dimension: UnitDimension,
+        category: String,
         fallbackUnit: String
     ) -> (quantity: Double, unit: String) {
         switch dimension {
         case .volume, .weight:
+            // Try purchase-unit catalog first (snaps up to store sizes).
+            if let purchase = PurchaseUnitCatalog.purchaseQuantity(
+                baseQty: baseQty, dimension: dimension, category: category
+            ) {
+                return purchase
+            }
             return UnitConverter.prettyDisplay(baseQuantity: baseQty, dimension: dimension)
         case .count, .other:
             return (baseQty, fallbackUnit)
