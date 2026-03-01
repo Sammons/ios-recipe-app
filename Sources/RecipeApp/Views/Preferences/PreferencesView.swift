@@ -66,6 +66,17 @@ struct PreferencesView: View {
                             in: 1...30
                         )
                     }
+
+                    Section {
+                        Toggle("Show Starter Recipes", isOn: Binding(
+                            get: { prefs.showStarterRecipes },
+                            set: { prefs.showStarterRecipes = $0 }
+                        ))
+                    } header: {
+                        Text("Starter Recipes")
+                    } footer: {
+                        Text("Built-in recipes to help you get started. Turn off to hide them from your recipe book.")
+                    }
                 }
             }
             .navigationTitle("Preferences")

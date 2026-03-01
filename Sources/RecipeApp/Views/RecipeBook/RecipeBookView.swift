@@ -3,14 +3,22 @@ import SwiftUI
 
 struct RecipeBookView: View {
     @Query(sort: \Recipe.title) private var recipes: [Recipe]
+    @Query private var preferences: [UserPreferences]
     @Environment(\.modelContext) private var modelContext
     @State private var searchText = ""
     @State private var selectedType: String? = nil
     @State private var filterMode: RecipeFilterService.FilterMode = .all
     @State private var showingAddRecipe = false
 
+    private var showStarter: Bool {
+        preferences.first?.showStarterRecipes ?? true
+    }
+
     private var filteredRecipes: [Recipe] {
         var result = recipes
+        if !showStarter {
+            result = result.filter { !$0.isStarterRecipe }
+        }
         if let type = selectedType {
             result = result.filter { $0.recipeType == type }
         }

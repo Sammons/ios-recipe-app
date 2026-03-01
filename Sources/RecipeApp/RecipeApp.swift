@@ -43,6 +43,7 @@ struct RecipeApp: App {
         if AppFlags.shouldSeed || AppFlags.shouldSeedOverdueMeals {
             IngredientCatalogSeeder.seedMissing(context: context)
         }
+        StarterRecipes.seedIfEmpty(context: context)
     }
 
     var body: some Scene {
