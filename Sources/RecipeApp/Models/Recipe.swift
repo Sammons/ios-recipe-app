@@ -18,6 +18,7 @@ final class Recipe {
     var allergenInfo: String
     var recipeType: String
     var instructions: [String]
+    var isStarterRecipe: Bool
     var createdAt: Date
     var updatedAt: Date
 
@@ -43,6 +44,7 @@ final class Recipe {
         allergenInfo: String = "",
         recipeType: String = RecipeType.dinner,
         instructions: [String] = [],
+        isStarterRecipe: Bool = false,
         recipeIngredients: [RecipeIngredient] = [],
         mealPlanEntries: [MealPlanEntry] = []
     ) {
@@ -61,6 +63,7 @@ final class Recipe {
         self.allergenInfo = allergenInfo.trimmingCharacters(in: .whitespacesAndNewlines)
         self.recipeType = recipeType
         self.instructions = instructions
+        self.isStarterRecipe = isStarterRecipe
         self.createdAt = Date()
         self.updatedAt = Date()
         self.recipeIngredients = recipeIngredients
