@@ -143,6 +143,8 @@ enum IngredientCatalog {
         "soy sauce": 1.110, "fish sauce": 1.060, "worcestershire sauce": 1.050,
         // Other pantry liquids
         "coconut milk canned": 0.930,
+        // Broths & stocks (essentially water-based, ~1.0 g/ml)
+        "chicken broth": 1.000, "beef broth": 1.000, "vegetable broth": 1.000,
     ]
 
     private static func make(_ names: [String], category: String) -> [IngredientCatalogEntry] {

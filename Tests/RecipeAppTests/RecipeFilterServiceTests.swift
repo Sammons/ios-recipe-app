@@ -166,6 +166,56 @@ struct RecipeFilterServiceTests {
         #expect(result.count == 0)
     }
 
+    @Test @MainActor func canCookNowMatchesBrothWithDensityCrossUnit() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        // Chicken broth with density enables volume↔weight matching
+        let broth = Ingredient(name: "chicken broth", density: 1.0)
+        context.insert(broth)
+
+        // Inventory: 2 cartons — "carton" is .other dimension, but with density
+        // the system can compare via cross-dimension conversion. However, "carton"
+        // is not a volume/weight unit. The real scenario: user has "64 fl oz" or "2 quart"
+        // in pantry, recipe needs "6 cup". Let's test that realistic case.
+        let inv = InventoryItem(quantity: 2, unit: "quart", ingredient: broth)
+        context.insert(inv)
+
+        let recipe = Recipe(title: "Chicken Soup", servings: 4)
+        context.insert(recipe)
+
+        // 6 cups needed — 2 quarts = 8 cups, so this should be sufficient
+        let ri = RecipeIngredient(quantity: 6, unit: "cup", recipe: recipe, ingredient: broth)
+        context.insert(ri)
+
+        try context.save()
+
+        let result = RecipeFilterService.filter(recipes: [recipe], mode: .canCookNow, context: context)
+        #expect(result.count == 1, "Broth in quarts should satisfy recipe needing cups")
+    }
+
+    @Test @MainActor func canCookNowMatchesBrothSameUnitDifferentQuantity() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let broth = Ingredient(name: "chicken broth", density: 1.0)
+        context.insert(broth)
+
+        let inv = InventoryItem(quantity: 8, unit: "cup", ingredient: broth)
+        context.insert(inv)
+
+        let recipe = Recipe(title: "Soup", servings: 4)
+        context.insert(recipe)
+
+        let ri = RecipeIngredient(quantity: 6, unit: "cup", recipe: recipe, ingredient: broth)
+        context.insert(ri)
+
+        try context.save()
+
+        let result = RecipeFilterService.filter(recipes: [recipe], mode: .canCookNow, context: context)
+        #expect(result.count == 1, "8 cups in pantry should satisfy 6 cups needed")
+    }
+
     @Test @MainActor func emptyInventoryPartialMatchPutsZeroPercentLast() throws {
         let container = try makeTestContainer()
         let context = container.mainContext

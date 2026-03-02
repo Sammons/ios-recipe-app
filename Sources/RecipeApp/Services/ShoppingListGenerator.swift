@@ -20,6 +20,9 @@ struct ShoppingListGenerator {
         let dimension: UnitDimension
         /// Canonical unit of first-seen ingredient — used as fallback display for count/other.
         let firstUnit: String
+        /// Original recipe unit before density normalization (e.g. "cup" even when
+        /// dimension was normalized to .weight via density). Used for recipe detail display.
+        let originalRecipeUnit: String
     }
 
     // MARK: - Public API
@@ -80,11 +83,13 @@ struct ShoppingListGenerator {
                     existing.baseQuantity += effectiveBaseQty
                     needed[key] = existing
                 } else {
+                    let canonical = UnitConverter.normalize(ri.unit)
                     needed[key] = NeedValue(
                         ingredient: ingredient,
                         baseQuantity: effectiveBaseQty,
                         dimension: effectiveDim,
-                        firstUnit: UnitConverter.normalize(ri.unit)
+                        firstUnit: canonical,
+                        originalRecipeUnit: canonical
                     )
                 }
             }
@@ -138,7 +143,10 @@ struct ShoppingListGenerator {
 
             // Compute precise recipe display quantity.
             let (recipeQty, recipeUnit) = recipeDisplayQuantity(
-                baseQty: baseToBuy, dimension: need.dimension, fallbackUnit: need.firstUnit
+                baseQty: baseToBuy, dimension: need.dimension,
+                fallbackUnit: need.firstUnit,
+                originalRecipeUnit: need.originalRecipeUnit,
+                density: need.ingredient.density
             )
 
             // Convert base quantity to a shelf-purchasable (quantity, unit) pair.
@@ -167,13 +175,31 @@ struct ShoppingListGenerator {
     // MARK: - Private helpers
 
     /// Compute the precise recipe-calculated quantity for display in detail view.
+    /// When an ingredient was density-normalized (e.g. "cup" → grams), converts back
+    /// to the original recipe unit so the detail shows "6 cup" instead of "1420 g".
     private static func recipeDisplayQuantity(
         baseQty: Double,
         dimension: UnitDimension,
-        fallbackUnit: String
+        fallbackUnit: String,
+        originalRecipeUnit: String,
+        density: Double?
     ) -> (quantity: Double, unit: String) {
         switch dimension {
         case .volume, .weight:
+            // If density normalization changed the dimension (e.g. volume "cup" → weight grams),
+            // convert back to the original recipe unit for a meaningful display.
+            let originalDim = UnitConverter.dimension(of: originalRecipeUnit)
+            if originalDim != dimension,
+               let converted = UnitConverter.convert(
+                   quantity: baseQty, from: dimension == .weight ? "g" : "tsp",
+                   to: originalRecipeUnit, density: density
+               ) {
+                return (converted, originalRecipeUnit)
+            }
+            // Same dimension — convert back to original recipe unit if recognized.
+            if let converted = UnitConverter.fromBaseUnit(baseQuantity: baseQty, toUnit: originalRecipeUnit) {
+                return (converted, originalRecipeUnit)
+            }
             return UnitConverter.prettyDisplay(baseQuantity: baseQty, dimension: dimension)
         case .count, .other:
             return (baseQty, fallbackUnit)
