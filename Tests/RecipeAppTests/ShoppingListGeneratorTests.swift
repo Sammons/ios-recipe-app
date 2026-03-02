@@ -305,6 +305,67 @@ struct ShoppingListGeneratorTests {
         #expect(items.first?.quantity == 4)
     }
 
+    @Test @MainActor func recipeDetailShowsOriginalUnitNotGrams() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        // Chicken broth with density — recipe uses cups, should display cups not grams
+        let broth = Ingredient(name: "chicken broth", displayName: "Chicken Broth", category: IngredientCategory.other, density: 1.0)
+        context.insert(broth)
+
+        let recipe = Recipe(title: "Soup", servings: 4)
+        context.insert(recipe)
+
+        let ri = RecipeIngredient(quantity: 6, unit: "cup", recipe: recipe, ingredient: broth)
+        context.insert(ri)
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        let entry = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 4, recipe: recipe)
+        context.insert(entry)
+
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        #expect(items.count == 1)
+        // The recipe detail should show "cup" not "g"
+        #expect(items[0].recipeUnit == "cup", "Recipe detail should show original unit 'cup', not 'g'; got '\(items[0].recipeUnit)'")
+        #expect(abs(items[0].recipeQuantity - 6.0) < 0.1, "Recipe detail should show ~6 cups")
+    }
+
+    @Test @MainActor func brothInventoryDeductsFromShoppingList() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let broth = Ingredient(name: "chicken broth", displayName: "Chicken Broth", category: IngredientCategory.other, density: 1.0)
+        context.insert(broth)
+
+        let recipe = Recipe(title: "Soup", servings: 4)
+        context.insert(recipe)
+
+        let ri = RecipeIngredient(quantity: 6, unit: "cup", recipe: recipe, ingredient: broth)
+        context.insert(ri)
+
+        // 4 cups in pantry — should deduct, leaving 2 cups needed
+        let inv = InventoryItem(quantity: 4, unit: "cup", ingredient: broth)
+        context.insert(inv)
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        let entry = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 4, recipe: recipe)
+        context.insert(entry)
+
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        #expect(items.count == 1)
+        // Only 2 cups needed after deduction — recipe detail should reflect this
+        #expect(items[0].recipeUnit == "cup")
+        #expect(abs(items[0].recipeQuantity - 2.0) < 0.1, "Should need ~2 cups after 4-cup inventory deduction")
+    }
+
     @Test @MainActor func outputOrderIsDeterministicByCategoryAndName() throws {
         let container = try makeTestContainer()
         let context = container.mainContext
