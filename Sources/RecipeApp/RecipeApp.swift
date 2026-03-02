@@ -44,6 +44,13 @@ struct RecipeApp: App {
             IngredientCatalogSeeder.seedMissing(context: context)
         }
         StarterRecipes.seedIfEmpty(context: context)
+
+        if AppFlags.shouldSeedFullPantry {
+            SeedData.seedFullPantryForAvocadoToast(context: context)
+        }
+        if AppFlags.shouldSeedPlannedMeal {
+            SeedData.seedPlannedMealForToday(context: context)
+        }
     }
 
     var body: some Scene {

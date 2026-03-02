@@ -386,4 +386,44 @@ struct SeedData {
             break
         }
     }
+
+    /// Seed inventory with enough of every ingredient to make Avocado Toast.
+    /// Used by UITEST_SEED_FULL_PANTRY for canCookNow filter testing.
+    static func seedFullPantryForAvocadoToast(context: ModelContext) {
+        let descriptor = FetchDescriptor<Recipe>(
+            predicate: #Predicate { $0.title == "Avocado Toast" }
+        )
+        guard let recipe = try? context.fetch(descriptor).first else { return }
+
+        for ri in recipe.recipeIngredients {
+            guard let ingredient = ri.ingredient else { continue }
+            if ingredient.inventoryItem != nil { continue }
+            let item = InventoryItem(
+                quantity: ri.quantity * 2,
+                unit: ri.unit,
+                ingredient: ingredient
+            )
+            context.insert(item)
+        }
+        try? context.save()
+    }
+
+    /// Seed a planned meal for today (Avocado Toast for Breakfast).
+    static func seedPlannedMealForToday(context: ModelContext) {
+        let descriptor = FetchDescriptor<Recipe>(
+            predicate: #Predicate { $0.title == "Avocado Toast" }
+        )
+        guard let recipe = try? context.fetch(descriptor).first else { return }
+
+        let today = DateHelpers.startOfDay(Date())
+        let entry = MealPlanEntry(
+            date: today,
+            mealSlot: MealSlot.breakfast,
+            servings: recipe.servings,
+            recipe: recipe
+        )
+        context.insert(entry)
+        try? context.save()
+    }
+
 }
