@@ -7,4 +7,6 @@ enum AppFlags {
     static let shouldSeedOverdueMeals = ProcessInfo.processInfo.arguments.contains("UITEST_SEED_OVERDUE_MEALS")
     static let enableMealPromptDuringUITest =
         ProcessInfo.processInfo.arguments.contains("UITEST_ENABLE_MEAL_PROMPT")
+    static let shouldSeedFullPantry = ProcessInfo.processInfo.arguments.contains("UITEST_SEED_FULL_PANTRY")
+    static let shouldSeedPlannedMeal = ProcessInfo.processInfo.arguments.contains("UITEST_SEED_PLANNED_MEAL")
 }
