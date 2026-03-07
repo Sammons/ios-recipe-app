@@ -6,6 +6,7 @@ struct InventoryView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var searchText = ""
     @State private var showingAddItem = false
+    @State private var itemToDelete: InventoryItem?
 
     private var filteredItems: [InventoryItem] {
         if searchText.isEmpty { return items }
@@ -60,8 +61,8 @@ struct InventoryView: View {
                                 }
                             }
                             .onDelete { offsets in
-                                for index in offsets {
-                                    modelContext.delete(items[index])
+                                if let index = offsets.first {
+                                    itemToDelete = items[index]
                                 }
                             }
                         }
@@ -79,6 +80,22 @@ struct InventoryView: View {
             }
             .sheet(isPresented: $showingAddItem) {
                 InventoryFormView()
+            }
+            .alert("Delete Item?", isPresented: Binding(
+                get: { itemToDelete != nil },
+                set: { if !$0 { itemToDelete = nil } }
+            )) {
+                Button("Delete", role: .destructive) {
+                    if let item = itemToDelete {
+                        modelContext.delete(item)
+                    }
+                    itemToDelete = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    itemToDelete = nil
+                }
+            } message: {
+                Text("Remove \(itemToDelete?.ingredient?.displayName ?? "this item") from your inventory?")
             }
         }
     }

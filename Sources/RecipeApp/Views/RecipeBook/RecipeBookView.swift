@@ -9,6 +9,7 @@ struct RecipeBookView: View {
     @State private var selectedType: String? = nil
     @State private var filterMode: RecipeFilterService.FilterMode = .all
     @State private var showingAddRecipe = false
+    @State private var recipeToDelete: Recipe?
 
     private var showStarter: Bool {
         preferences.first?.showStarterRecipes ?? true
@@ -61,7 +62,9 @@ struct RecipeBookView: View {
                                 }
                             }
                             .onDelete { offsets in
-                                deleteRecipes(recipes: recipes, at: offsets)
+                                if let index = offsets.first {
+                                    recipeToDelete = recipes[index]
+                                }
                             }
                         }
                     }
@@ -97,12 +100,22 @@ struct RecipeBookView: View {
             .sheet(isPresented: $showingAddRecipe) {
                 RecipeFormView(mode: .create)
             }
-        }
-    }
-
-    private func deleteRecipes(recipes: [Recipe], at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(recipes[index])
+            .alert("Delete Recipe?", isPresented: Binding(
+                get: { recipeToDelete != nil },
+                set: { if !$0 { recipeToDelete = nil } }
+            )) {
+                Button("Delete", role: .destructive) {
+                    if let recipe = recipeToDelete {
+                        modelContext.delete(recipe)
+                    }
+                    recipeToDelete = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    recipeToDelete = nil
+                }
+            } message: {
+                Text("Are you sure you want to delete \"\(recipeToDelete?.title ?? "")\"? This cannot be undone.")
+            }
         }
     }
 }

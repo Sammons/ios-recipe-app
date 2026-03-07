@@ -9,6 +9,7 @@ struct ShoppingListView: View {
     @State private var editingItem: ShoppingListItem?
     @State private var showChecked = false
     @State private var didEnsurePrefs = false
+    @State private var showClearConfirmation = false
 
     private let lookaheadQuickOptions = [3, 7, 14, 30]
 
@@ -130,7 +131,7 @@ struct ShoppingListView: View {
                                 }
 
                                 Button("Clear Purchased", systemImage: "trash", role: .destructive) {
-                                    clearChecked()
+                                    showClearConfirmation = true
                                 }
                             }
                         }
@@ -160,6 +161,14 @@ struct ShoppingListView: View {
             }
             .onAppear {
                 ensurePreferences()
+            }
+            .alert("Clear Purchased Items?", isPresented: $showClearConfirmation) {
+                Button("Clear All", role: .destructive) {
+                    clearChecked()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Remove \(checkedItems.count) purchased item\(checkedItems.count == 1 ? "" : "s") from the list?")
             }
         }
     }
