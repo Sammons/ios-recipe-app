@@ -107,7 +107,7 @@ struct MealCompletionServiceTests {
 
         try context.save()
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
 
         #expect(entry.status == MealStatus.completed)
         #expect(entry.completedAt != nil)
@@ -134,7 +134,7 @@ struct MealCompletionServiceTests {
 
         try context.save()
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
 
         #expect(inventory.quantity == 300) // 500 - 200
     }
@@ -161,7 +161,7 @@ struct MealCompletionServiceTests {
 
         try context.save()
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
 
         // 400 * (2/4) = 200 used, 1000 - 200 = 800
         #expect(inventory.quantity == 800)
@@ -188,7 +188,7 @@ struct MealCompletionServiceTests {
 
         try context.save()
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
 
         let remaining = try context.fetch(FetchDescriptor<InventoryItem>())
         #expect(remaining.count == 0)
@@ -241,7 +241,7 @@ struct MealCompletionServiceTests {
 
         try context.save()
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
 
         #expect(entry.status == MealStatus.completed)
     }

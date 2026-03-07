@@ -34,7 +34,7 @@ struct FunctionalFlowTests {
         #expect(abs(generatedBeforeCompletion[0].quantity - 1.0) < 0.01)
         #expect(generatedBeforeCompletion[0].unit == "lb")
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
         try context.save()
 
         #expect(entry.status == MealStatus.completed)

@@ -645,7 +645,7 @@ struct MealCompletionUnitConversionTests {
         context.insert(entry)
         try context.save()
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
 
         // 8 tbsp used = 8/16 = 0.5 cup deducted from 2 cups
         let items = try context.fetch(FetchDescriptor<InventoryItem>())
@@ -676,7 +676,7 @@ struct MealCompletionUnitConversionTests {
         context.insert(entry)
         try context.save()
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
 
         // Should not deduct — units incompatible (no density set)
         let items = try context.fetch(FetchDescriptor<InventoryItem>())
@@ -775,7 +775,7 @@ struct MealCompletionCrossDimConversionTests {
         context.insert(entry)
         try context.save()
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
 
         let items = try context.fetch(FetchDescriptor<InventoryItem>())
         #expect(items.count == 1)
