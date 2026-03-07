@@ -6,6 +6,7 @@ struct DayView: View {
     @Query private var allEntries: [MealPlanEntry]
     @Environment(\.modelContext) private var modelContext
     @State private var showingRecipePicker: String?
+    @State private var entryToDelete: MealPlanEntry?
 
     private var dayStart: Date { DateHelpers.startOfDay(selectedDate) }
     private var dayEnd: Date { DateHelpers.endOfDay(selectedDate) }
@@ -54,6 +55,22 @@ struct DayView: View {
             RecipePickerView { recipe in
                 addMealEntry(recipe: recipe, slot: slot)
             }
+        }
+        .alert("Remove Meal?", isPresented: Binding(
+            get: { entryToDelete != nil },
+            set: { if !$0 { entryToDelete = nil } }
+        )) {
+            Button("Remove", role: .destructive) {
+                if let entry = entryToDelete {
+                    modelContext.delete(entry)
+                }
+                entryToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                entryToDelete = nil
+            }
+        } message: {
+            Text("Remove \(entryToDelete?.recipe?.title ?? "this meal") from your plan?")
         }
     }
 
@@ -123,9 +140,9 @@ struct DayView: View {
                     .foregroundStyle(.orange)
             }
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
-                modelContext.delete(entry)
+                entryToDelete = entry
             } label: {
                 Label("Delete", systemImage: "trash")
             }
