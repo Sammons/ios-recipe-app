@@ -305,3 +305,51 @@ jobs:
             -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
             -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
             -authenticationKeyPath "$RUNNER_TEMP/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+
+      - name: Record upload evidence
+        if: success()
+        run: |
+          TAG="${{ github.ref_name }}"
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_FULL=$(git rev-parse HEAD)
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_number }}"
+          EVIDENCE_URL="https://pages.sammons.io/ios-recipe-app/"
+          TIMESTAMP=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+          # Extract build metadata from export output
+          BUILD_NUMBER=""
+          BUNDLE_VERSION=""
+          if [ -f build/export/DistributionSummary.plist ]; then
+            BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c 'Print :buildNumber' build/export/DistributionSummary.plist 2>/dev/null || echo 'unknown')
+            BUNDLE_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :bundleVersion' build/export/DistributionSummary.plist 2>/dev/null || echo 'unknown')
+          fi
+
+          # Print structured summary to CI logs
+          echo "==> TestFlight upload evidence"
+          echo "  tag:            $TAG"
+          echo "  commit:         $COMMIT_SHA ($COMMIT_FULL)"
+          echo "  build_number:   $BUILD_NUMBER"
+          echo "  bundle_version: $BUNDLE_VERSION"
+          echo "  ci_run:         $RUN_URL"
+          echo "  test_evidence:  $EVIDENCE_URL"
+          echo "  timestamp:      $TIMESTAMP"
+
+          # Write JSON artifact for persistence
+          cat > build/upload-evidence.json << JSONEOF
+          {
+            "tag": "$TAG",
+            "commit": "$COMMIT_FULL",
+            "build_number": "$BUILD_NUMBER",
+            "bundle_version": "$BUNDLE_VERSION",
+            "ci_run_url": "$RUN_URL",
+            "test_evidence_url": "$EVIDENCE_URL",
+            "timestamp": "$TIMESTAMP"
+          }
+          JSONEOF
+
+          # Deploy evidence JSON to pages alongside test evidence
+          ~/local/bin/rsync -rltz \
+            -e "ssh -i ~/.ssh/ci-deploy-key -o UserKnownHostsFile=~/.ssh/ci-deploy-known-hosts -o StrictHostKeyChecking=yes" \
+            build/upload-evidence.json \
+            "sammons@192.168.4.191:ios-recipe-app/"
+          echo "Upload evidence deployed to ${EVIDENCE_URL}upload-evidence.json"
