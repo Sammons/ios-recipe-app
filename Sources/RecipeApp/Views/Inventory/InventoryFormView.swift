@@ -51,7 +51,11 @@ struct InventoryFormView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
-                        .disabled(ingredientName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(
+                            ingredientName.trimmingCharacters(in: .whitespaces).isEmpty
+                                || quantity <= 0
+                                || unit.trimmingCharacters(in: .whitespaces).isEmpty
+                        )
                 }
             }
             .onAppear { loadExisting() }

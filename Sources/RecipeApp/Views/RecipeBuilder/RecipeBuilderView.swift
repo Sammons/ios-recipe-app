@@ -105,6 +105,13 @@ struct RecipeEditorPane: View {
     @State private var instructions: [String] = [""]
     @State private var saveError: String?
 
+    private var hasInvalidIngredientRow: Bool {
+        ingredientRows.contains { row in
+            let hasName = !row.name.trimmingCharacters(in: .whitespaces).isEmpty
+            return hasName && (row.quantity <= 0 || row.unit.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+    }
+
     var body: some View {
         Form {
             Section("Details") {
@@ -166,7 +173,10 @@ struct RecipeEditorPane: View {
                 Button("Save Recipe", systemImage: "checkmark") {
                     saveRecipe()
                 }
-                .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(
+                    title.trimmingCharacters(in: .whitespaces).isEmpty
+                        || hasInvalidIngredientRow
+                )
             }
         }
         #if os(iOS)
