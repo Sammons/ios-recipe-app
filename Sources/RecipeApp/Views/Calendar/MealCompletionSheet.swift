@@ -5,6 +5,7 @@ struct MealCompletionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var pendingEntries: [MealPlanEntry]
+    @State private var skippedDeductions: [SkippedDeduction] = []
     var onFinished: (() -> Void)?
 
     init(overdueEntries: [MealPlanEntry], onFinished: (() -> Void)? = nil) {
@@ -42,7 +43,8 @@ struct MealCompletionSheet: View {
                             Spacer()
 
                             Button {
-                                MealCompletionService.markCompleted(entry, context: modelContext)
+                                let skipped = MealCompletionService.markCompleted(entry, context: modelContext)
+                                skippedDeductions = skipped
                                 removeEntry(entry)
                             } label: {
                                 Label("Made", systemImage: "checkmark.circle.fill")
@@ -75,6 +77,18 @@ struct MealCompletionSheet: View {
             .toolbar {
                 Button("Done") { dismiss() }
                     .accessibilityIdentifier("meal-checkin-done")
+            }
+            .alert(
+                "Inventory Not Updated",
+                isPresented: Binding(
+                    get: { !skippedDeductions.isEmpty },
+                    set: { if !$0 { skippedDeductions = [] } }
+                )
+            ) {
+                Button("OK", role: .cancel) { skippedDeductions = [] }
+            } message: {
+                let names = skippedDeductions.map(\.ingredientName).joined(separator: ", ")
+                Text("Could not deduct \(names) from inventory due to incompatible units. Update your inventory manually.")
             }
         }
     }

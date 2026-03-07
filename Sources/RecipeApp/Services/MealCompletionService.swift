@@ -1,6 +1,12 @@
 import Foundation
 import SwiftData
 
+struct SkippedDeduction: Sendable {
+    let ingredientName: String
+    let recipeUnit: String
+    let inventoryUnit: String
+}
+
 @MainActor
 struct MealCompletionService {
     /// Returns overdue meal plan entries from the last 3 days.
@@ -18,11 +24,13 @@ struct MealCompletionService {
         return (try? context.fetch(descriptor)) ?? []
     }
 
-    static func markCompleted(_ entry: MealPlanEntry, context: ModelContext) {
+    @discardableResult
+    static func markCompleted(_ entry: MealPlanEntry, context: ModelContext) -> [SkippedDeduction] {
         entry.status = MealStatus.completed
         entry.completedAt = Date()
-        deductIngredients(entry: entry, context: context)
+        let skipped = deductIngredients(entry: entry, context: context)
         try? context.save()
+        return skipped
     }
 
     static func markSkipped(_ entry: MealPlanEntry, context: ModelContext? = nil) {
@@ -33,10 +41,12 @@ struct MealCompletionService {
         }
     }
 
-    private static func deductIngredients(entry: MealPlanEntry, context: ModelContext) {
-        guard let recipe = entry.recipe else { return }
+    private static func deductIngredients(entry: MealPlanEntry, context: ModelContext) -> [SkippedDeduction] {
+        guard let recipe = entry.recipe else { return [] }
         let servingMultiplier =
             recipe.servings > 0 ? Double(entry.servings) / Double(recipe.servings) : 1.0
+
+        var skipped: [SkippedDeduction] = []
 
         for ri in recipe.recipeIngredients {
             guard let ingredient = ri.ingredient,
@@ -44,17 +54,11 @@ struct MealCompletionService {
             else { continue }
 
             let used = ri.quantity * servingMultiplier
-
-            // Determine how much to deduct from inventory, handling unit mismatches.
-            // If units are identical (or both normalize to the same string) deduct directly.
-            // If units are compatible (same dimension, e.g. tbsp vs cups), convert first.
-            // Cross-dimension (e.g. cups vs g) is supported when density is known.
-            // If units are incompatible and no density bridge exists, skip this item.
-            let deductAmount: Double?
             let recipeUnit = ri.unit
             let inventoryUnit = inventoryItem.unit
             let density = ingredient.density
 
+            let deductAmount: Double?
             if UnitConverter.normalize(recipeUnit) == UnitConverter.normalize(inventoryUnit) {
                 deductAmount = used
             } else if UnitConverter.areCompatible(recipeUnit, inventoryUnit, density: density) {
@@ -65,7 +69,14 @@ struct MealCompletionService {
                 deductAmount = nil
             }
 
-            guard let amount = deductAmount else { continue }
+            guard let amount = deductAmount else {
+                skipped.append(SkippedDeduction(
+                    ingredientName: ingredient.displayName,
+                    recipeUnit: recipeUnit,
+                    inventoryUnit: inventoryUnit
+                ))
+                continue
+            }
 
             inventoryItem.quantity = max(0, inventoryItem.quantity - amount)
             inventoryItem.lastUpdated = Date()
@@ -74,5 +85,7 @@ struct MealCompletionService {
                 context.delete(inventoryItem)
             }
         }
+
+        return skipped
     }
 }
