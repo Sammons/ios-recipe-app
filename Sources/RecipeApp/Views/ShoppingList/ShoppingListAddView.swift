@@ -55,7 +55,11 @@ struct ShoppingListAddView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(isEditing ? "Save" : "Add") { save() }
-                        .disabled(ingredientName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(
+                            ingredientName.trimmingCharacters(in: .whitespaces).isEmpty
+                                || quantity <= 0
+                                || unit.trimmingCharacters(in: .whitespaces).isEmpty
+                        )
                 }
             }
             .onAppear {

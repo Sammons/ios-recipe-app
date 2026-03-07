@@ -35,6 +35,13 @@ struct RecipeFormView: View {
         return false
     }
 
+    private var hasInvalidIngredientRow: Bool {
+        ingredientRows.contains { row in
+            let hasName = !row.name.trimmingCharacters(in: .whitespaces).isEmpty
+            return hasName && (row.quantity <= 0 || row.unit.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -112,7 +119,10 @@ struct RecipeFormView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
-                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(
+                            title.trimmingCharacters(in: .whitespaces).isEmpty
+                                || hasInvalidIngredientRow
+                        )
                 }
             }
             .onAppear { loadExisting() }
