@@ -8,6 +8,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: ios-build
+  cancel-in-progress: false
+
 env:
   SIMULATOR_NAME: "iPhone 17 Pro"
 
@@ -213,6 +217,13 @@ jobs:
         run: |
           # Clean up intermediate files before deploy
           rm -rf screenshots/raw screenshots/test-results.json
+
+          # Guard: don't overwrite good evidence with an empty report
+          # Skip deploy only if BOTH screenshots and test results are missing
+          if ! ls screenshots/*.png >/dev/null 2>&1 && ! grep -q '<tr>' screenshots/index.html 2>/dev/null; then
+            echo "No evidence to deploy (no screenshots or test results) — skipping"
+            exit 0
+          fi
 
           # PR builds deploy to pr-<number>/ subpath; main pushes to root
           if [ "${{ github.event_name }}" = "pull_request" ]; then
