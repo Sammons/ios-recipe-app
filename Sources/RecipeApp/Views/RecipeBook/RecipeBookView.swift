@@ -10,6 +10,7 @@ struct RecipeBookView: View {
     @State private var filterMode: RecipeFilterService.FilterMode = .all
     @State private var showingAddRecipe = false
     @State private var recipeToDelete: Recipe?
+    @State private var showStarterProtection = false
 
     private var showStarter: Bool {
         preferences.first?.showStarterRecipes ?? true
@@ -63,7 +64,12 @@ struct RecipeBookView: View {
                             }
                             .onDelete { offsets in
                                 if let index = offsets.first {
-                                    recipeToDelete = recipes[index]
+                                    let recipe = recipes[index]
+                                    if recipe.isStarterRecipe {
+                                        showStarterProtection = true
+                                    } else {
+                                        recipeToDelete = recipe
+                                    }
                                 }
                             }
                         }
@@ -115,6 +121,11 @@ struct RecipeBookView: View {
                 }
             } message: {
                 Text("Are you sure you want to delete \"\(recipeToDelete?.title ?? "")\"? This cannot be undone.")
+            }
+            .alert("Built-in Recipe", isPresented: $showStarterProtection) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Starter recipes can't be deleted. You can hide them in Preferences.")
             }
         }
     }
