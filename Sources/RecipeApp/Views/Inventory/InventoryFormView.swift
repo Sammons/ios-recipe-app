@@ -11,6 +11,7 @@ struct InventoryFormView: View {
     @State private var quantity: Double = 0
     @State private var unit = ""
     @State private var selectedIngredient: Ingredient?
+    @State private var saveError: String?
 
     private var isEditing: Bool { existingItem != nil }
 
@@ -54,6 +55,17 @@ struct InventoryFormView: View {
                 }
             }
             .onAppear { loadExisting() }
+            .alert(
+                "Could Not Save",
+                isPresented: Binding(
+                    get: { saveError != nil },
+                    set: { if !$0 { saveError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: {
+                Text(saveError ?? "An unknown error occurred.")
+            }
         }
     }
 
@@ -85,8 +97,12 @@ struct InventoryFormView: View {
             modelContext.insert(item)
         }
 
-        try? modelContext.save()
-        dismiss()
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            saveError = error.localizedDescription
+        }
     }
 
     private func findOrCreateIngredient(name: String) -> Ingredient {

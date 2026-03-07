@@ -12,6 +12,7 @@ struct ShoppingListAddView: View {
     @State private var unit = ""
     @State private var selectedIngredient: Ingredient?
     @State private var didLoadExisting = false
+    @State private var saveError: String?
 
     init(itemToEdit: ShoppingListItem? = nil) {
         self.itemToEdit = itemToEdit
@@ -60,6 +61,17 @@ struct ShoppingListAddView: View {
             .onAppear {
                 loadExistingIfNeeded()
             }
+            .alert(
+                "Could Not Save",
+                isPresented: Binding(
+                    get: { saveError != nil },
+                    set: { if !$0 { saveError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: {
+                Text(saveError ?? "An unknown error occurred.")
+            }
         }
     }
 
@@ -79,8 +91,12 @@ struct ShoppingListAddView: View {
             modelContext.insert(item)
         }
 
-        try? modelContext.save()
-        dismiss()
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            saveError = error.localizedDescription
+        }
     }
 
     private func findOrCreateIngredient(name: String) -> Ingredient {

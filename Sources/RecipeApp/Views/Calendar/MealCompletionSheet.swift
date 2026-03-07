@@ -6,6 +6,7 @@ struct MealCompletionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var pendingEntries: [MealPlanEntry]
     @State private var skippedDeductions: [SkippedDeduction] = []
+    @State private var saveError: String?
     var onFinished: (() -> Void)?
 
     init(overdueEntries: [MealPlanEntry], onFinished: (() -> Void)? = nil) {
@@ -43,9 +44,13 @@ struct MealCompletionSheet: View {
                             Spacer()
 
                             Button {
-                                let skipped = MealCompletionService.markCompleted(entry, context: modelContext)
-                                skippedDeductions = skipped
-                                removeEntry(entry)
+                                do {
+                                    let skipped = try MealCompletionService.markCompleted(entry, context: modelContext)
+                                    skippedDeductions = skipped
+                                    removeEntry(entry)
+                                } catch {
+                                    saveError = error.localizedDescription
+                                }
                             } label: {
                                 Label("Made", systemImage: "checkmark.circle.fill")
                                     .font(.callout.weight(.semibold))
@@ -89,6 +94,17 @@ struct MealCompletionSheet: View {
             } message: {
                 let names = skippedDeductions.map(\.ingredientName).joined(separator: ", ")
                 Text("Could not deduct \(names) from inventory due to incompatible units. Update your inventory manually.")
+            }
+            .alert(
+                "Could Not Save",
+                isPresented: Binding(
+                    get: { saveError != nil },
+                    set: { if !$0 { saveError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: {
+                Text(saveError ?? "An unknown error occurred.")
             }
         }
     }

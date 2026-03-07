@@ -103,6 +103,7 @@ struct RecipeEditorPane: View {
     @State private var allergenInfo = ""
     @State private var ingredientRows: [IngredientRowData] = []
     @State private var instructions: [String] = [""]
+    @State private var saveError: String?
 
     var body: some View {
         Form {
@@ -179,6 +180,17 @@ struct RecipeEditorPane: View {
             }
         }
         #endif
+        .alert(
+            "Could Not Save",
+            isPresented: Binding(
+                get: { saveError != nil },
+                set: { if !$0 { saveError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: {
+            Text(saveError ?? "An unknown error occurred.")
+        }
     }
 
     private func saveRecipe() {
@@ -213,8 +225,12 @@ struct RecipeEditorPane: View {
             modelContext.insert(ri)
         }
 
-        try? modelContext.save()
-        resetForm()
+        do {
+            try modelContext.save()
+            resetForm()
+        } catch {
+            saveError = error.localizedDescription
+        }
     }
 
     private func findOrCreateIngredient(name: String, category: String) -> Ingredient {
