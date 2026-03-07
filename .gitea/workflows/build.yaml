@@ -321,7 +321,7 @@ jobs:
           BUNDLE_VERSION=""
           if [ -f build/export/DistributionSummary.plist ]; then
             BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c 'Print :buildNumber' build/export/DistributionSummary.plist 2>/dev/null || echo 'unknown')
-            BUNDLE_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :cfBundleShortVersionString' build/export/DistributionSummary.plist 2>/dev/null || echo 'unknown')
+            BUNDLE_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :bundleVersion' build/export/DistributionSummary.plist 2>/dev/null || echo 'unknown')
           fi
 
           # Print structured summary to CI logs
