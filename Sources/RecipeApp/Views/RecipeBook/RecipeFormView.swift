@@ -28,6 +28,7 @@ struct RecipeFormView: View {
     @State private var recipeType = RecipeType.dinner
     @State private var ingredientRows: [IngredientRowData] = []
     @State private var instructions: [String] = []
+    @State private var saveError: String?
 
     private var isEditing: Bool {
         if case .edit = mode { return true }
@@ -115,6 +116,17 @@ struct RecipeFormView: View {
                 }
             }
             .onAppear { loadExisting() }
+            .alert(
+                "Could Not Save",
+                isPresented: Binding(
+                    get: { saveError != nil },
+                    set: { if !$0 { saveError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: {
+                Text(saveError ?? "An unknown error occurred.")
+            }
         }
     }
 
@@ -196,8 +208,12 @@ struct RecipeFormView: View {
             saveIngredients(for: recipe)
         }
 
-        try? modelContext.save()
-        dismiss()
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            saveError = error.localizedDescription
+        }
     }
 
     private func saveIngredients(for recipe: Recipe) {

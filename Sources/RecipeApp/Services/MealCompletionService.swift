@@ -24,12 +24,11 @@ struct MealCompletionService {
         return (try? context.fetch(descriptor)) ?? []
     }
 
-    @discardableResult
-    static func markCompleted(_ entry: MealPlanEntry, context: ModelContext) -> [SkippedDeduction] {
+    static func markCompleted(_ entry: MealPlanEntry, context: ModelContext) throws -> [SkippedDeduction] {
         entry.status = MealStatus.completed
         entry.completedAt = Date()
         let skipped = deductIngredients(entry: entry, context: context)
-        try? context.save()
+        try context.save()
         return skipped
     }
 
