@@ -1214,7 +1214,7 @@ struct MealCompletionDeductionTests {
         ctx.insert(entry)
         try ctx.save()
 
-        MealCompletionService.markCompleted(entry, context: ctx)
+        try MealCompletionService.markCompleted(entry, context: ctx)
 
         let items = try ctx.fetch(FetchDescriptor<InventoryItem>())
         #expect(items.count == 1)
@@ -1239,7 +1239,7 @@ struct MealCompletionDeductionTests {
         ctx.insert(entry)
         try ctx.save()
 
-        MealCompletionService.markCompleted(entry, context: ctx)
+        try MealCompletionService.markCompleted(entry, context: ctx)
 
         let items = try ctx.fetch(FetchDescriptor<InventoryItem>())
         #expect(items.count == 1)
@@ -1264,7 +1264,7 @@ struct MealCompletionDeductionTests {
         ctx.insert(entry)
         try ctx.save()
 
-        MealCompletionService.markCompleted(entry, context: ctx)
+        try MealCompletionService.markCompleted(entry, context: ctx)
 
         let items = try ctx.fetch(FetchDescriptor<InventoryItem>())
         #expect(items.count == 1)
