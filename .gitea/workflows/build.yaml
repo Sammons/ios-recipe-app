@@ -219,6 +219,7 @@ jobs:
           rm -rf screenshots/raw screenshots/test-results.json
 
           # Guard: don't overwrite good evidence with an empty report
+          # Skip deploy only if BOTH screenshots and test results are missing
           if ! ls screenshots/*.png >/dev/null 2>&1 && ! grep -q '<tr>' screenshots/index.html 2>/dev/null; then
             echo "No evidence to deploy (no screenshots or test results) — skipping"
             exit 0
