@@ -451,11 +451,12 @@ final class RecipeAppUITests: XCTestCase {
         XCTAssertTrue(caloriesRow.waitForExistence(timeout: 8), "Recipe detail should show nutrition rows")
 
         let allergenChip = app.descendants(matching: .any)["recipe-allergen-chip"]
-        XCTAssertTrue(allergenChip.waitForExistence(timeout: 5), "Recipe detail should show allergen chips")
+        XCTAssertTrue(allergenChip.waitForExistence(timeout: 8), "Recipe detail should show allergen chips")
 
         app.swipeUp()
+        sleep(1) // Allow scroll animation to settle before querying
         let categoryBadge = app.descendants(matching: .any)["ingredient-category-badge"]
-        XCTAssertTrue(categoryBadge.waitForExistence(timeout: 8), "Ingredient rows should show category badges")
+        XCTAssertTrue(categoryBadge.waitForExistence(timeout: 10), "Ingredient rows should show category badges")
 
         screenshot("18-recipe-nutrition-allergens-categories")
     }

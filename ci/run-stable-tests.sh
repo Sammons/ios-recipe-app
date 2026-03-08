@@ -98,15 +98,23 @@ prepare_simulator() {
   if [ -z "$udid" ]; then
     echo "Warning: could not resolve simulator UDID for '$SIMULATOR_NAME'; falling back to global reset"
     xcrun simctl shutdown all || true
-    xcrun simctl erase all || true
+    sleep 3
+    xcrun simctl boot all || true
     sleep 5
     return
   fi
 
-  xcrun simctl shutdown "$udid" || true
-  xcrun simctl erase "$udid" || true
-  xcrun simctl boot "$udid" || true
-  xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1 || true
+  xcrun simctl shutdown "$udid" 2>/dev/null || true
+  sleep 2
+  xcrun simctl boot "$udid" 2>/dev/null || true
+
+  # Wait for simulator to fully boot (Springboard ready)
+  if ! xcrun simctl bootstatus "$udid" -b 2>/dev/null; then
+    echo "Warning: bootstatus wait failed; adding extra delay"
+    sleep 8
+  fi
+  # Extra settle time for Springboard and app installation services
+  sleep 3
 }
 
 retry_with_sim_reset() {
