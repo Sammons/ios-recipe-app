@@ -296,6 +296,56 @@ struct PurchaseUnitCatalogTests {
         #expect(result!.unit == "block")
         #expect(result!.displayText.contains("8 oz"))
     }
+
+    // MARK: Condiment overrides
+
+    @Test func ketchupUsesBottle() {
+        // 200 g ketchup → 20 oz bottle = 566.99 g → 0.353 bottles → snap to 1
+        let result = PurchaseUnitCatalog.purchaseQuantity(
+            baseQty: 200, dimension: .weight, category: IngredientCategory.other,
+            ingredientName: "ketchup"
+        )
+        #expect(result != nil)
+        #expect(result!.unit == "bottle")
+        #expect(abs(result!.quantity - 1.0) < 0.01)
+        #expect(result!.displayText.contains("20 oz"))
+    }
+
+    @Test func soySauceUsesSmallBottle() {
+        // 100 g soy sauce → 10 oz bottle = 283.50 g → 0.353 bottles → snap to 1
+        let result = PurchaseUnitCatalog.purchaseQuantity(
+            baseQty: 100, dimension: .weight, category: IngredientCategory.other,
+            ingredientName: "soy sauce"
+        )
+        #expect(result != nil)
+        #expect(result!.unit == "bottle")
+        #expect(abs(result!.quantity - 1.0) < 0.01)
+        #expect(result!.displayText.contains("10 oz"))
+    }
+
+    @Test func mayonnaiseUsesJar() {
+        // 200 g mayo → 16 oz jar = 453.59 g → 0.441 jars → snap to 1
+        let result = PurchaseUnitCatalog.purchaseQuantity(
+            baseQty: 200, dimension: .weight, category: IngredientCategory.other,
+            ingredientName: "mayonnaise"
+        )
+        #expect(result != nil)
+        #expect(result!.unit == "jar")
+        #expect(abs(result!.quantity - 1.0) < 0.01)
+        #expect(result!.displayText.contains("16 oz"))
+    }
+
+    @Test func tahiniUsesSmallJar() {
+        // 100 g tahini → 8 oz jar = 226.80 g → 0.441 jars → snap to 1
+        let result = PurchaseUnitCatalog.purchaseQuantity(
+            baseQty: 100, dimension: .weight, category: IngredientCategory.other,
+            ingredientName: "tahini"
+        )
+        #expect(result != nil)
+        #expect(result!.unit == "jar")
+        #expect(abs(result!.quantity - 1.0) < 0.01)
+        #expect(result!.displayText.contains("8 oz"))
+    }
 }
 
 // MARK: - Shopping list integration: purchase units

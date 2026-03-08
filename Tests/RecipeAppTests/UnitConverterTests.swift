@@ -311,6 +311,26 @@ struct UnitConverterTests {
         #expect(abs(cups! - 1.0) < 0.001)
     }
 
+    // MARK: Condiment density round-trips
+
+    @Test func condimentDensityRoundTrips() {
+        // Verify cross-dimension round-trip for each new condiment density
+        let condiments: [(name: String, density: Double)] = [
+            ("ketchup", 1.150), ("hot sauce", 1.010), ("mustard dijon", 1.050),
+            ("mustard yellow", 1.050), ("mayonnaise", 0.910), ("barbecue sauce", 1.080),
+            ("salsa roja", 1.030), ("salsa verde", 1.030),
+            ("tomato paste", 1.200), ("tomato sauce", 1.050),
+            ("tahini", 1.070), ("miso paste", 1.200), ("tamari", 1.110),
+        ]
+        for c in condiments {
+            let grams = UnitConverter.convert(quantity: 1, from: "tbsp", to: "g", density: c.density)
+            #expect(grams != nil, "tbsp→g failed for \(c.name)")
+            let tbsp = UnitConverter.convert(quantity: grams!, from: "g", to: "tbsp", density: c.density)
+            #expect(tbsp != nil, "g→tbsp failed for \(c.name)")
+            #expect(abs(tbsp! - 1.0) < 0.001, "round-trip mismatch for \(c.name)")
+        }
+    }
+
     @Test func areCompatibleCrossDimWithDensity() {
         #expect(UnitConverter.areCompatible("cup", "g", density: 0.529) == true)
         #expect(UnitConverter.areCompatible("oz", "cup", density: 0.911) == true)

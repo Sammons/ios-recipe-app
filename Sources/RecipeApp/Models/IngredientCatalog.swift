@@ -140,7 +140,13 @@ enum IngredientCatalog {
         // Vinegars & liquid condiments
         "white vinegar": 1.010, "apple cider vinegar": 1.010,
         "balsamic vinegar": 1.060, "red wine vinegar": 1.010, "rice vinegar": 1.010,
-        "soy sauce": 1.110, "fish sauce": 1.060, "worcestershire sauce": 1.050,
+        "soy sauce": 1.110, "tamari": 1.110, "fish sauce": 1.060,
+        "worcestershire sauce": 1.050,
+        "hot sauce": 1.010, "ketchup": 1.150, "mustard dijon": 1.050,
+        "mustard yellow": 1.050, "mayonnaise": 0.910, "barbecue sauce": 1.080,
+        "salsa roja": 1.030, "salsa verde": 1.030,
+        "tomato paste": 1.200, "tomato sauce": 1.050,
+        "tahini": 1.070, "miso paste": 1.200,
         // Other pantry liquids
         "coconut milk canned": 0.930,
         // Broths & stocks (essentially water-based, ~1.0 g/ml)
