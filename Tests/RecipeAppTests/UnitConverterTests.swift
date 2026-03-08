@@ -990,7 +990,7 @@ struct CrossDimDensityNewCategoryTests {
         context.insert(entry)
         try context.save()
 
-        MealCompletionService.markCompleted(entry, context: context)
+        try MealCompletionService.markCompleted(entry, context: context)
 
         let items = try context.fetch(FetchDescriptor<InventoryItem>())
         #expect(items.count == 1)
