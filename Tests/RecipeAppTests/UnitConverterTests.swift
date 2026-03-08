@@ -327,9 +327,9 @@ struct UnitConverterTests {
             ("quinoa", 0.720), ("couscous", 0.630), ("bulgur", 0.650),
             ("panko breadcrumbs", 0.240), ("italian breadcrumbs", 0.480),
             // Spices (sample from each density range)
-            ("garlic powder", 0.580), ("cinnamon ground", 0.560),
-            ("oregano dried", 0.240), ("turmeric ground", 0.670),
-            ("dill dried", 0.190), ("cumin seeds", 0.480),
+            ("garlic powder", 0.650), ("cinnamon ground", 0.560),
+            ("oregano dried", 0.200), ("turmeric ground", 0.640),
+            ("dill dried", 0.210), ("cumin seeds", 0.480),
             // Extracts & leaveners
             ("vanilla extract", 0.880), ("active dry yeast", 0.680),
             // Condiments
@@ -930,5 +930,111 @@ struct ShoppingListCrossDimConversionTests {
 
         let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
         #expect(items.count == 0)
+    }
+}
+
+// MARK: - Integration: cross-dimension density for spices, dairy solids, and grains
+
+@Suite("CrossDimDensity.NewCategories", .serialized)
+struct CrossDimDensityNewCategoryTests {
+
+    @Test @MainActor func spiceCrossDimInRecipeFilter() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let cumin = Ingredient(
+            name: "cumin ground", displayName: "Cumin Ground",
+            category: IngredientCategory.spice, density: 0.530
+        )
+        context.insert(cumin)
+
+        // Recipe needs 2 tbsp cumin (volume)
+        let recipe = Recipe(title: "Curry", servings: 1)
+        context.insert(recipe)
+        let ri = RecipeIngredient(quantity: 2, unit: "tbsp", recipe: recipe, ingredient: cumin)
+        context.insert(ri)
+
+        // Inventory: 20 g cumin (weight)
+        // 2 tbsp = 6 tsp × 4.92892 ml/tsp = 29.57 ml × 0.530 = 15.67 g → 20 g is sufficient
+        let inventory = InventoryItem(quantity: 20, unit: "g", ingredient: cumin)
+        context.insert(inventory)
+        try context.save()
+
+        let result = RecipeFilterService.filter(recipes: [recipe], mode: .canCookNow, context: context)
+        #expect(result.count == 1)
+    }
+
+    @Test @MainActor func dairySolidCrossDimInMealCompletion() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let yogurt = Ingredient(
+            name: "yogurt greek plain", displayName: "Yogurt Greek Plain",
+            category: IngredientCategory.dairy, density: 1.060
+        )
+        context.insert(yogurt)
+
+        // Recipe uses 1 cup yogurt (volume)
+        // 1 cup = 48 tsp × 4.92892 = 236.59 ml × 1.060 = 250.78 g
+        let recipe = Recipe(title: "Tzatziki", servings: 1)
+        context.insert(recipe)
+        let ri = RecipeIngredient(quantity: 1, unit: "cup", recipe: recipe, ingredient: yogurt)
+        context.insert(ri)
+
+        // Inventory: 500 g yogurt (weight)
+        let inventory = InventoryItem(quantity: 500, unit: "g", ingredient: yogurt)
+        context.insert(inventory)
+
+        let yesterday = DateHelpers.addDays(-1, to: DateHelpers.startOfDay(Date()))
+        let entry = MealPlanEntry(date: yesterday, mealSlot: MealSlot.lunch, servings: 1, recipe: recipe)
+        context.insert(entry)
+        try context.save()
+
+        MealCompletionService.markCompleted(entry, context: context)
+
+        let items = try context.fetch(FetchDescriptor<InventoryItem>())
+        #expect(items.count == 1)
+        // 500 g − 250.78 g ≈ 249.22 g remaining
+        #expect(abs(items[0].quantity - 249.2) < 2.0)
+        #expect(items[0].unit == "g")
+    }
+
+    @Test @MainActor func grainCrossDimInShoppingList() throws {
+        let container = try makeTestContainer()
+        let context = container.mainContext
+
+        let quinoa = Ingredient(
+            name: "quinoa", displayName: "Quinoa",
+            category: IngredientCategory.grain, density: 0.720
+        )
+        context.insert(quinoa)
+
+        // Recipe 1: 1 cup quinoa (volume) ≈ 170.3 g
+        let recipe1 = Recipe(title: "Quinoa Bowl", servings: 1)
+        context.insert(recipe1)
+        let ri1 = RecipeIngredient(quantity: 1, unit: "cup", recipe: recipe1, ingredient: quinoa)
+        context.insert(ri1)
+
+        // Recipe 2: 150 g quinoa (weight)
+        let recipe2 = Recipe(title: "Quinoa Salad", servings: 1)
+        context.insert(recipe2)
+        let ri2 = RecipeIngredient(quantity: 150, unit: "g", recipe: recipe2, ingredient: quinoa)
+        context.insert(ri2)
+
+        let tomorrow = DateHelpers.addDays(1, to: DateHelpers.startOfDay(Date()))
+        let entry1 = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.lunch, servings: 1, recipe: recipe1)
+        let entry2 = MealPlanEntry(date: tomorrow, mealSlot: MealSlot.dinner, servings: 1, recipe: recipe2)
+        context.insert(entry1)
+        context.insert(entry2)
+        try context.save()
+
+        ShoppingListGenerator.generate(context: context)
+
+        let items = try context.fetch(FetchDescriptor<ShoppingListItem>())
+        // Both normalized to grams: 170.3 + 150 = 320.3 g
+        // Grain weight: lb, 1 lb inc → 320.3 / 453.59 = 0.706 lb → snap 1 lb
+        #expect(items.count == 1)
+        #expect(items[0].unit == "lb")
+        #expect(abs(items[0].quantity - 1.0) < 0.01)
     }
 }
