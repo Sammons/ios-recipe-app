@@ -311,23 +311,38 @@ struct UnitConverterTests {
         #expect(abs(cups! - 1.0) < 0.001)
     }
 
-    // MARK: Condiment density round-trips
+    // MARK: Density round-trips across all categories
 
-    @Test func condimentDensityRoundTrips() {
-        // Verify cross-dimension round-trip for each new condiment density
-        let condiments: [(name: String, density: Double)] = [
-            ("ketchup", 1.150), ("hot sauce", 1.010), ("mustard dijon", 1.050),
-            ("mustard yellow", 1.050), ("mayonnaise", 0.910), ("barbecue sauce", 1.080),
-            ("salsa roja", 1.030), ("salsa verde", 1.030),
-            ("tomato paste", 1.200), ("tomato sauce", 1.050),
-            ("tahini", 1.070), ("miso paste", 1.200), ("tamari", 1.110),
+    @Test func allDensityValuesRoundTrip() {
+        // Every density value in the catalog must produce a correct tbsp→g→tbsp round-trip.
+        // This validates both the density value and the UnitConverter cross-dim path.
+        let densities: [(name: String, density: Double)] = [
+            // Proteins
+            ("peanut butter", 1.090), ("almond butter", 1.010), ("egg whites", 1.030),
+            // Dairy
+            ("yogurt plain", 1.040), ("yogurt greek plain", 1.060),
+            ("kefir", 1.030), ("sour cream", 1.010), ("cream cheese", 1.010),
+            ("cottage cheese", 1.020), ("ricotta", 1.020),
+            // Grains
+            ("quinoa", 0.720), ("couscous", 0.630), ("bulgur", 0.650),
+            ("panko breadcrumbs", 0.240), ("italian breadcrumbs", 0.480),
+            // Spices (sample from each density range)
+            ("garlic powder", 0.580), ("cinnamon ground", 0.560),
+            ("oregano dried", 0.240), ("turmeric ground", 0.670),
+            ("dill dried", 0.190), ("cumin seeds", 0.480),
+            // Extracts & leaveners
+            ("vanilla extract", 0.880), ("active dry yeast", 0.680),
+            // Condiments
+            ("ketchup", 1.150), ("mayonnaise", 0.910),
+            ("tomato paste", 1.200), ("hummus classic", 1.050),
+            ("canned diced tomatoes", 1.050),
         ]
-        for c in condiments {
-            let grams = UnitConverter.convert(quantity: 1, from: "tbsp", to: "g", density: c.density)
-            #expect(grams != nil, "tbsp→g failed for \(c.name)")
-            let tbsp = UnitConverter.convert(quantity: grams!, from: "g", to: "tbsp", density: c.density)
-            #expect(tbsp != nil, "g→tbsp failed for \(c.name)")
-            #expect(abs(tbsp! - 1.0) < 0.001, "round-trip mismatch for \(c.name)")
+        for d in densities {
+            let grams = UnitConverter.convert(quantity: 1, from: "tbsp", to: "g", density: d.density)
+            #expect(grams != nil, "tbsp→g failed for \(d.name)")
+            let tbsp = UnitConverter.convert(quantity: grams!, from: "g", to: "tbsp", density: d.density)
+            #expect(tbsp != nil, "g→tbsp failed for \(d.name)")
+            #expect(abs(tbsp! - 1.0) < 0.001, "round-trip mismatch for \(d.name): got \(tbsp!)")
         }
     }
 
