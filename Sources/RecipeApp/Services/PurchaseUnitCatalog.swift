@@ -108,6 +108,32 @@ struct PurchaseUnitCatalog {
             ]
         }
 
+        // Condiment bottles & jars
+        let condimentBottle: [UnitDimension: ShelfPackage] = [
+            .weight: ShelfPackage(unit: "bottle", increment: 1, sizeLabel: "20 oz"),
+        ]
+        let condimentSmallBottle: [UnitDimension: ShelfPackage] = [
+            .weight: ShelfPackage(unit: "bottle", increment: 1, sizeLabel: "10 oz"),
+        ]
+        let condimentJar: [UnitDimension: ShelfPackage] = [
+            .weight: ShelfPackage(unit: "jar", increment: 1, sizeLabel: "8 oz"),
+        ]
+
+        for name in ["ketchup", "barbecue sauce"] {
+            map[name] = condimentBottle
+        }
+        for name in ["hot sauce", "soy sauce", "tamari", "fish sauce", "worcestershire sauce"] {
+            map[name] = condimentSmallBottle
+        }
+        for name in ["mustard dijon", "mustard yellow", "mayonnaise", "salsa roja", "salsa verde"] {
+            map[name] = [
+                .weight: ShelfPackage(unit: "jar", increment: 1, sizeLabel: "16 oz"),
+            ]
+        }
+        for name in ["tahini", "miso paste"] {
+            map[name] = condimentJar
+        }
+
         return map
     }()
 
@@ -151,6 +177,7 @@ struct PurchaseUnitCatalog {
         "container": 453.59,    // 16 oz container
         "block": 226.80,        // 8 oz block
         "can": 411.07,          // 14.5 oz can (default)
+        "bottle": 566.99,       // 20 oz bottle (default)
     ]
 
     /// Maps package unit names to their capacity in tsp (for volume dimension).
